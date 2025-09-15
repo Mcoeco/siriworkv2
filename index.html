@@ -1,299 +1,1091 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดการหนังสือราชการ</title>
-  <style>
-    body {
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      background: #f4f6f9;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการหนังสือราชการ - สถานีตำรวจภูธรน่าน</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="60" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="70" cy="80" r="1.2" fill="rgba(255,255,255,0.1)"/></svg>');
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .nav-tabs {
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .nav-tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-tab:hover {
+            background: #e9ecef;
+            color: #1e3c72;
+        }
+        
+        .nav-tab.active {
+            color: #1e3c72;
+            border-bottom-color: #1e3c72;
+            background: white;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
+            color: white;
+        }
+        
+        .document-card {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .document-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .document-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-received { background: #d4edda; color: #155724; }
+        .status-processing { background: #fff3cd; color: #856404; }
+        .status-sent { background: #cce5ff; color: #004085; }
+        .status-completed { background: #d1ecf1; color: #0c5460; }
+        
+        .document-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .detail-value {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 30px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
 
-    header {
-      background: linear-gradient(90deg, #1e3c72, #2a5298);
-      color: white;
-      padding: 12px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
 
-    header h1 {
-      font-size: 20px;
-      margin: 0;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn {
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .btn-primary { background: #007bff; color: white; }
-    .btn-danger { background: #dc3545; color: white; }
-    .btn-secondary { background: #6c757d; color: white; }
-    .btn-success { background: #28a745; color: white; }
-
-    .document-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 12px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .document-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .document-number {
-      font-weight: bold;
-      color: #2a5298;
-    }
-
-    .status-badge {
-      padding: 2px 8px;
-      border-radius: 5px;
-      font-size: 12px;
-      color: white;
-    }
-    .status-received { background: #28a745; }
-    .status-sent { background: #ff9800; }
-
-    .detail-item {
-      margin: 4px 0;
-    }
-
-    /* === Modal === */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 400px;
-      max-width: 90%;
-    }
-    .modal h3 { margin-top: 0; }
-    .modal input, .modal select {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 6px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    .checkbox-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 15px;
-    }
-  </style>
+        .loading.show {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .nav-tab {
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            .document-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
 </head>
 <body>
-
-  <header>
-    <h1>📑 ระบบจัดการหนังสือราชการ</h1>
-    <div class="toolbar">
-      <button class="btn btn-success" onclick="openExportModal()">ส่งออก</button>
-    </div>
-  </header>
-
-  <main id="document-list"></main>
-
-  <!-- Modal แก้ไข -->
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <h3>✏️ แก้ไขเอกสาร</h3>
-      <form id="editForm">
-        <input type="hidden" id="editId">
-        <label>เลขที่เอกสาร</label>
-        <input type="text" id="editDocNumber" required>
-        <label>วันที่</label>
-        <input type="date" id="editDate" required>
-        <label>หน่วยงาน</label>
-        <input type="text" id="editOrg" required>
-        <label>ประเภท</label>
-        <select id="editType">
-          <option value="received">รับ</option>
-          <option value="sent">ส่ง</option>
-        </select>
-        <label>ประเภทหนังสือ</label>
-        <input type="text" id="editDocType">
-        <label>เรื่อง</label>
-        <input type="text" id="editSubject" required>
-        <div style="text-align:right; margin-top:10px;">
-          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary">บันทึก</button>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ ระบบจัดการหนังสือราชการ</h1>
+            <p>สถานีตำรวจภูธรน่าน | จังหวัดน่าน</p>
+            <div id="dbStatus" style="position: absolute; top: 10px; right: 20px; font-size: 12px; opacity: 0.8;"></div>
         </div>
-      </form>
-    </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('register')">📥 ลงทะเบียนรับ</button>
+            <button class="nav-tab" onclick="showTab('send')">📤 ลงทะเบียนส่ง</button>
+            <button class="nav-tab" onclick="showTab('search')">🔍 ค้นหาเอกสาร</button>
+            <button class="nav-tab" onclick="showTab('stats')">📊 สถิติ</button>
+        </div>
+        
+        <div class="content">
+            <div id="alert" class="alert"></div>
+            <div id="loading" class="loading">⏳ กำลังโหลดข้อมูล...</div>
+            
+            <!-- ลงทะเบียนรับ -->
+            <div id="register" class="tab-content active">
+                <h2 style="margin-bottom: 25px; color: #1e3c72;">📥 ลงทะเบียนรับหนังสือ</h2>
+                
+                <form id="registerForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>เลขที่หนังสือ</label>
+                            <input type="text" id="docNumber" required placeholder="เช่น น.123/2567">
+                        </div>
+                        <div class="form-group">
+                            <label>วันที่รับ</label>
+                            <input type="date" id="receiveDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>จาก (หน่วยงาน)</label>
+                            <input type="text" id="fromOrg" required placeholder="ชื่อหน่วยงานต้นทาง">
+                        </div>
+                        <div class="form-group">
+                            <label>ประเภทเอกสาร</label>
+                            <select id="docType" required>
+                                <option value="">เลือกประเภท</option>
+                                <option value="หนังสือราชการ">หนังสือราชการ</option>
+                                <option value="คำสั่ง">คำสั่ง</option>
+                                <option value="ประกาศ">ประกาศ</option>
+                                <option value="บันทึกข้อความ">บันทึกข้อความ</option>
+                                <option value="รายงาน">รายงาน</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>เรื่อง</label>
+                        <input type="text" id="subject" required placeholder="เรื่องของเอกสาร">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ความเร่งด่วน</label>
+                            <select id="priority">
+                                <option value="ปกติ">ปกติ</option>
+                                <option value="ด่วน">ด่วน</option>
+                                <option value="ด่วนมาก">ด่วนมาก</option>
+                                <option value="ด่วนที่สุด">ด่วนที่สุด</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ผู้รับผิดชอบ</label>
+                            <input type="text" id="responsible" placeholder="ชื่อผู้รับผิดชอบ">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>หมายเหตุ</label>
+                        <textarea id="notes" rows="3" placeholder="หมายเหตุเพิ่มเติม"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="registerBtn">📝 บันทึกข้อมูล</button>
+                </form>
+            </div>
+            
+            <!-- ลงทะเบียนส่ง -->
+            <div id="send" class="tab-content">
+                <h2 style="margin-bottom: 25px; color: #1e3c72;">📤 ลงทะเบียนส่งหนังสือ</h2>
+                
+                <form id="sendForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>เลขที่หนังสือส่ง</label>
+                            <input type="text" id="sendDocNumber" required placeholder="เช่น น.234/2567">
+                        </div>
+                        <div class="form-group">
+                            <label>วันที่ส่ง</label>
+                            <input type="date" id="sendDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ส่งถึง (หน่วยงาน)</label>
+                            <input type="text" id="toOrg" required placeholder="ชื่อหน่วยงานปลายทาง">
+                        </div>
+                        <div class="form-group">
+                            <label>ประเภทเอกสาร</label>
+                            <select id="sendDocType" required>
+                                <option value="">เลือกประเภท</option>
+                                <option value="หนังสือราชการ">หนังสือราชการ</option>
+                                <option value="คำสั่ง">คำสั่ง</option>
+                                <option value="ประกาศ">ประกาศ</option>
+                                <option value="บันทึกข้อความ">บันทึกข้อความ</option>
+                                <option value="รายงาน">รายงาน</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>เรื่อง</label>
+                        <input type="text" id="sendSubject" required placeholder="เรื่องของเอกสาร">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ช่องทางการส่ง</label>
+                            <select id="sendMethod">
+                                <option value="มือ">ส่งด้วยมือ</option>
+                                <option value="ไปรษณีย์">ไปรษณีย์</option>
+                                <option value="โทรสาร">โทรสาร</option>
+                                <option value="อีเมล">อีเมล</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ผู้ส่ง</label>
+                            <input type="text" id="sender" placeholder="ชื่อผู้ส่ง">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>หมายเหตุ</label>
+                        <textarea id="sendNotes" rows="3" placeholder="หมายเหตุเพิ่มเติม"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="sendBtn">📤 บันทึกการส่ง</button>
+                </form>
+            </div>
+            
+            <!-- ค้นหาเอกสาร -->
+            <div id="search" class="tab-content">
+                <h2 style="margin-bottom: 25px; color: #1e3c72;">🔍 ค้นหาเอกสาร</h2>
+                
+                <div class="search-box">
+                    <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาด้วยเลขที่หนังสือ, เรื่อง, หน่วยงาน...">
+                    <span class="search-icon">🔍</span>
+                </div>
+                
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <button class="btn btn-primary" onclick="filterDocuments('all')">ทั้งหมด</button>
+                    <button class="btn btn-success" onclick="filterDocuments('received')">รับ</button>
+                    <button class="btn btn-warning" onclick="filterDocuments('sent')">ส่ง</button>
+                    <button class="btn btn-primary" onclick="refreshDocuments()">🔄 รีเฟรช</button>
+                </div>
+                
+                <div id="documentsList">
+                    <!-- รายการเอกสารจะแสดงที่นี่ -->
+                </div>
+            </div>
+<!-- Modal แก้ไข -->
+<div id="editModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; max-width:500px; width:100%;">
+    <h3>✏️ แก้ไขเอกสาร</h3>
+    <input type="hidden" id="editId">
+    <div class="form-group"><label>เลขที่หนังสือ</label><input type="text" id="editDocNumber"></div>
+    <div class="form-group"><label>วันที่</label><input type="date" id="editDate"></div>
+    <div class="form-group"><label>หน่วยงาน</label><input type="text" id="editOrganization"></div>
+    <div class="form-group"><label>ประเภท</label><input type="text" id="editDocType"></div>
+    <div class="form-group"><label>เรื่อง</label><input type="text" id="editSubject"></div>
+    <div class="form-group"><label>หมายเหตุ</label><textarea id="editNotes"></textarea></div>
+    <button class="btn btn-success" onclick="saveEdit()">💾 บันทึก</button>
+    <button class="btn btn-danger" onclick="closeEditModal()">❌ ปิด</button>
   </div>
+</div>
 
-  <!-- Modal ส่งออก -->
-  <div id="exportModal" class="modal">
-    <div class="modal-content">
-      <h3>📤 ส่งออกข้อมูล</h3>
-      <div class="checkbox-list">
-        <label><input type="checkbox" value="json"> JSON</label>
-        <label><input type="checkbox" value="html"> HTML</label>
-        <label><input type="checkbox" value="excel"> Excel (CSV)</label>
-        <label><input type="checkbox" value="pdf"> PDF</label>
-        <label><input type="checkbox" value="word"> Word (DOC)</label>
-        <label><input type="checkbox" value="print"> พิมพ์เอกสาร</label>
-      </div>
-      <div style="text-align:right;">
-        <button class="btn btn-secondary" onclick="closeExportModal()">ยกเลิก</button>
-        <button class="btn btn-success" onclick="doExport()">ส่งออก</button>
-      </div>
+            <!-- สถิติ -->
+            <div id="stats" class="tab-content">
+                <h2 style="margin-bottom: 25px; color: #1e3c72;">📊 สถิติการใช้งาน</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalReceived">0</div>
+                        <div class="stat-label">เอกสารที่รับ</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalSent">0</div>
+                        <div class="stat-label">เอกสารที่ส่ง</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalDocuments">0</div>
+                        <div class="stat-label">รวมทั้งหมด</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="todayCount">0</div>
+                        <div class="stat-label">วันนี้</div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <h3 style="margin-bottom: 20px; color: #1e3c72;">📈 สรุปรายเดือน</h3>
+                    <div id="monthlyStats">
+                        <!-- สถิติรายเดือนจะแสดงที่นี่ -->
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="exportData()" style="margin-top: 20px;">📁 ส่งออกข้อมูล</button>
+            </div>
+        </div>
     </div>
-  </div>
+<!-- โหลด Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script>
-    let documents = [
-      {id:1, type:"received", doc_number:"น.001/2567", document_date:"2024-12-01", organization:"ผู้ว่าราชการจังหวัดน่าน", doc_type:"หนังสือภายนอก", subject:"เรื่องทดสอบ 1"},
-      {id:2, type:"sent", doc_number:"ส.002/2567", document_date:"2024-12-05", organization:"กระทรวงมหาดไทย", doc_type:"หนังสือภายใน", subject:"เรื่องทดสอบ 2"}
+<script>
+const { createClient } = supabase;
+const supabaseUrl = 'https://kowaztnpsharqdroiliv.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
+const db = createClient(supabaseUrl, supabaseKey);
+
+// Global variables
+let documents = [];
+let currentFilter = 'all';
+
+// ✅ Test connection
+async function testConnection() {
+    try {
+        const { data, error } = await db.from('documents').select('*').limit(1);
+        if (error && error.code !== '42P01') {
+            console.error('Connection error:', error);
+            document.getElementById('dbStatus').innerHTML = '🔴 ไม่สามารถเชื่อมต่อ';
+            return false;
+        }
+        document.getElementById('dbStatus').innerHTML = '🟢 เชื่อมต่อแล้ว';
+        return true;
+    } catch (err) {
+        console.error('Connection test failed:', err);
+        document.getElementById('dbStatus').innerHTML = '🔴 ไม่สามารถเชื่อมต่อ';
+        return false;
+    }
+}
+
+// ✅ Initialize database
+async function initializeDatabase() {
+    try {
+        const { data, error } = await db.from('documents').select('*').limit(1);
+        if (error && error.code === '42P01') {
+            showAlert('กรุณาสร้างตาราง documents ใน Supabase ก่อนใช้งาน', 'error');
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error('Database initialization error:', err);
+        return false;
+    }
+}
+<script>
+// ✅ เปิดฟอร์มแก้ไข
+function editDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+
+    document.getElementById('editId').value = doc.id;
+    document.getElementById('editDocNumber').value = doc.doc_number;
+    document.getElementById('editDate').value = doc.document_date;
+    document.getElementById('editOrganization').value = doc.organization;
+    document.getElementById('editDocType').value = doc.doc_type;
+    document.getElementById('editSubject').value = doc.subject;
+    document.getElementById('editNotes').value = doc.notes || '';
+    
+    document.getElementById('editModal').style.display = 'block';
+}
+
+// ✅ ปิดฟอร์มแก้ไข
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// ✅ บันทึกแก้ไข
+async function saveEdit() {
+    const id = document.getElementById('editId').value;
+    try {
+        const { error } = await db.from('documents').update({
+            doc_number: document.getElementById('editDocNumber').value,
+            document_date: document.getElementById('editDate').value,
+            organization: document.getElementById('editOrganization').value,
+            doc_type: document.getElementById('editDocType').value,
+            subject: document.getElementById('editSubject').value,
+            notes: document.getElementById('editNotes').value
+        }).eq('id', id);
+
+        if (error) throw error;
+        closeEditModal();
+        await loadDocuments();
+        showAlert('✏️ แก้ไขข้อมูลแล้ว');
+    } catch (err) {
+        showAlert('แก้ไขไม่สำเร็จ: ' + err.message, 'error');
+    }
+}
+
+// ✅ ส่งออกข้อมูลหลายไฟล์
+function exportData() {
+    const options = prompt("เลือกการส่งออก (คั่นด้วย ,): json, excel, word, pdf, html, print\nเช่น: json,excel,pdf");
+    if (!options) return;
+
+    const formats = options.split(',').map(f => f.trim().toLowerCase());
+
+    if (formats.includes("json")) exportJSON();
+    if (formats.includes("excel")) exportExcel();
+    if (formats.includes("word")) exportWord();
+    if (formats.includes("pdf")) exportPDF();
+    if (formats.includes("html")) exportHTML();
+    if (formats.includes("print")) window.print();
+}
+
+// ✅ JSON
+function exportJSON() {
+    const dataStr = JSON.stringify(documents, null, 2);
+    downloadFile(dataStr, "application/json", "documents.json");
+}
+
+// ✅ HTML
+function exportHTML() {
+    let html = "<html><head><meta charset='utf-8'><title>Documents</title></head><body><h1>Documents</h1><table border='1' cellspacing='0' cellpadding='5'><tr><th>เลขที่</th><th>วันที่</th><th>หน่วยงาน</th><th>ประเภท</th><th>เรื่อง</th></tr>";
+    documents.forEach(doc => {
+        html += `<tr>
+            <td>${doc.doc_number}</td>
+            <td>${doc.document_date}</td>
+            <td>${doc.organization}</td>
+            <td>${doc.doc_type}</td>
+            <td>${doc.subject}</td>
+        </tr>`;
+    });
+    html += "</table></body></html>";
+    downloadFile(html, "text/html", "documents.html");
+}
+
+// ✅ Excel (CSV)
+function exportExcel() {
+    let csv = "เลขที่,วันที่,หน่วยงาน,ประเภท,เรื่อง\n";
+    documents.forEach(doc => {
+        csv += `${doc.doc_number},${doc.document_date},${doc.organization},${doc.doc_type},${doc.subject}\n`;
+    });
+    downloadFile(csv, "text/csv", "documents.csv");
+}
+
+// ✅ Word
+function exportWord() {
+    let content = "<h1>Documents</h1>";
+    documents.forEach(doc => {
+        content += `<p><b>${doc.doc_number}</b> | ${doc.document_date} | ${doc.organization} | ${doc.doc_type} | ${doc.subject}</p>`;
+    });
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "documents.doc";
+    a.click();
+}
+
+// ✅ PDF (แบบง่าย ใช้ print to pdf)
+function exportPDF() {
+    let newWin = window.open("");
+    newWin.document.write("<h1>Documents</h1><table border='1' cellspacing='0' cellpadding='5'><tr><th>เลขที่</th><th>วันที่</th><th>หน่วยงาน</th><th>ประเภท</th><th>เรื่อง</th></tr>");
+    documents.forEach(doc => {
+        newWin.document.write(`<tr>
+            <td>${doc.doc_number}</td>
+            <td>${doc.document_date}</td>
+            <td>${doc.organization}</td>
+            <td>${doc.doc_type}</td>
+            <td>${doc.subject}</td>
+        </tr>`);
+    });
+    newWin.document.write("</table>");
+    newWin.print();
+}
+
+// ✅ Helper โหลดไฟล์
+function downloadFile(content, type, filename) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+
+// ✅ Loading UI
+function showLoading(show = true) {
+    const loading = document.getElementById('loading');
+    if (show) loading.classList.add('show');
+    else loading.classList.remove('show');
+}
+
+// ✅ Switch tab
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+
+    if (tabName === 'search') loadDocuments();
+    else if (tabName === 'stats') updateStats();
+}
+
+// ✅ Show alert
+function showAlert(message, type = 'success') {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type} show`;
+    setTimeout(() => alert.classList.remove('show'), 3000);
+}
+
+// ✅ Load documents
+async function loadDocuments() {
+    showLoading(true);
+    try {
+        const { data, error } = await db.from('documents').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        documents = data || [];
+        displayDocuments();
+    } catch (error) {
+        console.error('Error loading documents:', error);
+        showAlert('โหลดข้อมูลล้มเหลว: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ✅ Insert document
+async function insertDocument(docData) {
+    try {
+        const { data, error } = await db.from('documents').insert([{
+            doc_number: docData.docNumber,
+            doc_type: docData.docType,
+            subject: docData.subject,
+            organization: docData.organization,
+            document_date: docData.date,
+            priority: docData.priority || null,
+            responsible: docData.responsible || null,
+            sender: docData.sender || null,
+            send_method: docData.sendMethod || null,
+            notes: docData.notes || null,
+            status: docData.status,
+            type: docData.type
+        }]).select();
+
+        if (error) throw error;
+        return data[0];
+    } catch (error) {
+        console.error('Insert error:', error);
+        throw error;
+    }
+}
+
+// ✅ Delete
+async function deleteDocumentFromDB(id) {
+    try {
+        const { error } = await db.from('documents').delete().eq('id', id);
+        if (error) throw error;
+    } catch (error) {
+        console.error('Delete error:', error);
+        throw error;
+    }
+}
+
+// ✅ Filter
+function filterDocuments(filter) {
+    currentFilter = filter;
+    displayDocuments();
+}
+
+// ✅ Refresh
+async function refreshDocuments() {
+    await loadDocuments();
+    showAlert('🔄 รีเฟรชแล้ว');
+}
+
+// ✅ Display documents
+function displayDocuments() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const container = document.getElementById('documentsList');
+    let filteredDocs = documents;
+
+    if (currentFilter === 'received') filteredDocs = documents.filter(doc => doc.type === 'received');
+    else if (currentFilter === 'sent') filteredDocs = documents.filter(doc => doc.type === 'sent');
+
+    if (searchTerm) {
+        filteredDocs = filteredDocs.filter(doc =>
+            doc.doc_number.toLowerCase().includes(searchTerm) ||
+            doc.subject.toLowerCase().includes(searchTerm) ||
+            doc.organization.toLowerCase().includes(searchTerm) ||
+            doc.doc_type.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    if (filteredDocs.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#666;padding:40px;">ไม่พบเอกสาร</div>';
+        return;
+    }
+
+    container.innerHTML = filteredDocs.map(doc => `
+        <div class="document-card">
+            <div class="document-header">
+                <div class="document-number">${doc.doc_number}</div>
+                <div class="status-badge status-${doc.type === 'received' ? 'received' : 'sent'}">
+                    ${doc.type === 'received' ? '📥 รับ' : '📤 ส่ง'}
+                </div>
+                <button class="btn btn-primary" onclick="editDocument(${doc.id})" style="padding:5px 10px;font-size:12px;">✏️ แก้ไข</button>
+                <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding:5px 10px;font-size:12px;">🗑️ ลบ</button>
+            </div>
+            <div class="document-details">
+                <div class="detail-item"><div class="detail-label">วันที่</div><div class="detail-value">${new Date(doc.document_date).toLocaleDateString('th-TH')}</div></div>
+                <div class="detail-item"><div class="detail-label">${doc.type === 'received' ? 'จาก' : 'ส่งถึง'}</div><div class="detail-value">${doc.organization}</div></div>
+                <div class="detail-item"><div class="detail-label">ประเภท</div><div class="detail-value">${doc.doc_type}</div></div>
+            </div>
+            <div class="detail-item"><div class="detail-label">เรื่อง</div><div class="detail-value" style="font-weight:600;color:#1e3c72;">${doc.subject}</div></div>
+        </div>
+    `).join('');
+}
+
+// ✅ Edit
+async function editDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+
+    const newSubject = prompt("แก้ไขเรื่อง:", doc.subject);
+    if (newSubject === null) return;
+
+    try {
+        const { error } = await db.from('documents')
+            .update({ subject: newSubject })
+            .eq('id', id);
+
+        if (error) throw error;
+        await loadDocuments();
+        showAlert("✏️ แก้ไขแล้ว", "success");
+    } catch (err) {
+        showAlert("แก้ไขไม่สำเร็จ: " + err.message, "error");
+    }
+}
+
+// ✅ Delete wrapper
+async function deleteDocument(id) {
+    if (confirm('ต้องการลบเอกสารนี้หรือไม่?')) {
+        try {
+            await deleteDocumentFromDB(id);
+            await loadDocuments();
+            showAlert('🗑️ ลบแล้ว', 'success');
+        } catch (error) {
+            showAlert('ลบไม่สำเร็จ: ' + error.message, 'error');
+        }
+    }
+}
+
+// ✅ Stats
+async function updateStats() {
+    const received = documents.filter(doc => doc.type === 'received').length;
+    const sent = documents.filter(doc => doc.type === 'sent').length;
+    const today = new Date().toISOString().split('T')[0];
+    const todayDocs = documents.filter(doc => doc.document_date === today).length;
+
+    document.getElementById('totalReceived').textContent = received;
+    document.getElementById('totalSent').textContent = sent;
+    document.getElementById('totalDocuments').textContent = documents.length;
+    document.getElementById('todayCount').textContent = todayDocs;
+}
+
+// ✅ Export (multi-format)
+async function exportData() {
+    const options = [
+        { key: "json", label: "📁 JSON" },
+        { key: "html", label: "🌐 HTML" },
+        { key: "excel", label: "📊 Excel (CSV)" },
+        { key: "pdf", label: "📄 PDF" },
+        { key: "word", label: "📝 Word (DOC)" },
+        { key: "print", label: "🖨️ พิมพ์เอกสาร" }
     ];
 
-    function renderDocuments() {
-      const list = document.getElementById("document-list");
-      list.innerHTML = documents.map(doc => `
-        <div class="document-card">
-          <div class="document-header">
-            <div class="document-number">${doc.doc_number}</div>
-            <div class="status-badge ${doc.type === 'received' ? 'status-received' : 'status-sent'}">
-              ${doc.type === 'received' ? '📥 รับ' : '📤 ส่ง'}
-            </div>
-            <div>
-              <button class="btn btn-primary" onclick="openEditModal(${doc.id})">✏️ แก้ไข</button>
-              <button class="btn btn-danger" onclick="deleteDocument(${doc.id})">🗑️ ลบ</button>
-            </div>
-          </div>
-          <div class="detail-item"><b>วันที่:</b> ${new Date(doc.document_date).toLocaleDateString('th-TH')}</div>
-          <div class="detail-item"><b>${doc.type === 'received' ? 'จาก' : 'ส่งถึง'}:</b> ${doc.organization}</div>
-          <div class="detail-item"><b>ประเภท:</b> ${doc.doc_type}</div>
-          <div class="detail-item"><b>เรื่อง:</b> ${doc.subject}</div>
-        </div>
-      `).join("");
-    }
+    const selected = prompt("เลือกประเภทไฟล์ที่ต้องการ (คั่นด้วย , ):\n" + 
+        options.map(o => `${o.key} = ${o.label}`).join("\n"));
 
-    // === Modal แก้ไข ===
-    function openEditModal(id) {
-      const doc = documents.find(d => d.id === id);
-      if (!doc) return;
-      document.getElementById("editId").value = doc.id;
-      document.getElementById("editDocNumber").value = doc.doc_number;
-      document.getElementById("editDate").value = doc.document_date;
-      document.getElementById("editOrg").value = doc.organization;
-      document.getElementById("editType").value = doc.type;
-      document.getElementById("editDocType").value = doc.doc_type;
-      document.getElementById("editSubject").value = doc.subject;
-      document.getElementById("editModal").style.display = "flex";
-    }
-    function closeEditModal() {
-      document.getElementById("editModal").style.display = "none";
-    }
-    document.getElementById("editForm").onsubmit = function(e) {
-      e.preventDefault();
-      const id = parseInt(document.getElementById("editId").value);
-      const index = documents.findIndex(d => d.id === id);
-      documents[index] = {
-        id,
-        doc_number: document.getElementById("editDocNumber").value,
-        document_date: document.getElementById("editDate").value,
-        organization: document.getElementById("editOrg").value,
-        type: document.getElementById("editType").value,
-        doc_type: document.getElementById("editDocType").value,
-        subject: document.getElementById("editSubject").value,
-      };
-      closeEditModal();
-      renderDocuments();
-    };
+    if (!selected) return;
+    const formats = selected.split(",").map(s => s.trim().toLowerCase());
 
-    // === Modal ส่งออก ===
-    function openExportModal() {
-      document.getElementById("exportModal").style.display = "flex";
-    }
-    function closeExportModal() {
-      document.getElementById("exportModal").style.display = "none";
-    }
-    function doExport() {
-      const checkboxes = document.querySelectorAll("#exportModal input[type=checkbox]:checked");
-      const formats = Array.from(checkboxes).map(cb => cb.value);
-      closeExportModal();
-
-      formats.forEach(f => {
+    for (let f of formats) {
         if (f === "json") {
-          const blob = new Blob([JSON.stringify(documents, null, 2)], { type: "application/json" });
-          downloadFile(blob, "documents.json");
+            const blob = new Blob([JSON.stringify(documents, null, 2)], { type: "application/json" });
+            downloadFile(blob, "documents.json");
         }
-        if (f === "html") {
-          let html = "<html><body><h2>รายการเอกสาร</h2><ul>";
-          documents.forEach(d => { html += `<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`; });
-          html += "</ul></body></html>";
-          const blob = new Blob([html], { type: "text/html" });
-          downloadFile(blob, "documents.html");
+        else if (f === "html") {
+            let html = `<html><body><h2>รายการเอกสาร</h2><ul>`;
+            documents.forEach(d => {
+                html += `<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`;
+            });
+            html += `</ul></body></html>`;
+            const blob = new Blob([html], { type: "text/html" });
+            downloadFile(blob, "documents.html");
         }
-        if (f === "excel") {
-          const csv = documents.map(d => `${d.doc_number},${d.subject},${d.organization}`).join("\n");
-          const blob = new Blob([csv], { type: "text/csv" });
-          downloadFile(blob, "documents.csv");
+        else if (f === "excel") {
+            const csv = documents.map(d => `${d.doc_number},${d.subject},${d.organization}`).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            downloadFile(blob, "documents.csv");
         }
-        if (f === "pdf") {
-          const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
-          const blob = new Blob([content], { type: "application/pdf" });
-          downloadFile(blob, "documents.pdf");
+        else if (f === "pdf") {
+            const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
+            const blob = new Blob([content], { type: "application/pdf" });
+            downloadFile(blob, "documents.pdf");
         }
-        if (f === "word") {
-          const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
-          const blob = new Blob([content], { type: "application/msword" });
-          downloadFile(blob, "documents.doc");
+        else if (f === "word") {
+            const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
+            const blob = new Blob([content], { type: "application/msword" });
+            downloadFile(blob, "documents.doc");
         }
-        if (f === "print") {
-          const w = window.open("", "", "width=800,height=600");
-          w.document.write("<h2>รายการเอกสาร</h2><ul>");
-          documents.forEach(d => { w.document.write(`<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`); });
-          w.document.write("</ul>");
-          w.print();
+        else if (f === "print") {
+            const printWin = window.open("", "", "width=800,height=600");
+            printWin.document.write("<h2>รายการเอกสาร</h2>");
+            printWin.document.write("<ul>");
+            documents.forEach(d => {
+                printWin.document.write(`<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`);
+            });
+            printWin.document.write("</ul>");
+            printWin.document.close();
+            printWin.print();
         }
-      });
     }
+    showAlert("✅ ส่งออกเรียบร้อย");
+}
 
-    function downloadFile(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+function downloadFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ✅ Init
+document.addEventListener('DOMContentLoaded', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('receiveDate').value = today;
+    document.getElementById('sendDate').value = today;
+
+    // ฟอร์มเอกสารรับ
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        try {
+            await insertDocument({
+                type: 'received',
+                docNumber: document.getElementById('docNumber').value,
+                date: document.getElementById('receiveDate').value,
+                organization: document.getElementById('fromOrg').value,
+                docType: document.getElementById('docType').value,
+                subject: document.getElementById('subject').value,
+                priority: document.getElementById('priority').value,
+                responsible: document.getElementById('responsible').value,
+                notes: document.getElementById('notes').value,
+                status: 'received'
+            });
+            showAlert('✅ บันทึกเอกสารรับแล้ว');
+            this.reset();
+            document.getElementById('receiveDate').value = today;
+            await loadDocuments();
+            updateStats();
+        } catch (err) {
+            showAlert('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+        }
+    });
+
+    // ฟอร์มเอกสารส่ง
+    document.getElementById('sendForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        try {
+            await insertDocument({
+                type: 'sent',
+                docNumber: document.getElementById('sendDocNumber').value,
+                date: document.getElementById('sendDate').value,
+                organization: document.getElementById('toOrg').value,
+                docType: document.getElementById('sendDocType').value,
+                subject: document.getElementById('sendSubject').value,
+                sendMethod: document.getElementById('sendMethod').value,
+                sender: document.getElementById('sender').value,
+                notes: document.getElementById('sendNotes').value,
+                status: 'sent'
+            });
+            showAlert('✅ บันทึกเอกสารส่งแล้ว');
+            this.reset();
+            document.getElementById('sendDate').value = today;
+            await loadDocuments();
+            updateStats();
+        } catch (err) {
+            showAlert('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', displayDocuments);
+
+    const connected = await testConnection();
+    if (connected) {
+        const dbReady = await initializeDatabase();
+        if (dbReady) {
+            await loadDocuments();
+            updateStats();
+        }
     }
-
-    function deleteDocument(id) {
-      documents = documents.filter(d => d.id !== id);
-      renderDocuments();
-    }
-
-    renderDocuments();
-  </script>
+});
+</script>
 
 </body>
 </html>
