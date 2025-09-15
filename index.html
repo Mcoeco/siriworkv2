@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+the<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -698,7 +698,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/1.35.7/supabase.min.js">
-// การตั้งค่า Supabase
+        // การตั้งค่า Supabase
 let supabase = null;
 let isConnected = false;
 
@@ -706,34 +706,42 @@ let isConnected = false;
 let documents = [];
 let currentFilter = 'all';
 
+// ฟังก์ชันแสดงข้อมูล debug
+function showDebugInfo(message) {
+    const debugElement = document.getElementById('debugInfo');
+    if (debugElement) {
+        debugElement.style.display = 'block';
+        debugElement.innerHTML = `<strong>Debug:</strong> ${message}`;
+        console.log('Debug:', message);
+    }
+}
+
 // ฟังก์ชันเชื่อมต่อ Supabase
-function initializeSupabase() {
-    // ใส่ URL และ API Key ของ Supabase ที่นี่
+async function initializeSupabase() {
     const SUPABASE_URL = 'https://kowaztnpsharqdroiliv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
     
-    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-        // ใช้ localStorage เป็น fallback ถ้าไม่ได้ตั้งค่า Supabase
-        documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
-        updateConnectionStatus(false);
-        return false;
-    }
+    showDebugInfo(`กำลังเชื่อมต่อ Supabase... URL: ${SUPABASE_URL.substring(0, 30)}...`);
     
     try {
         // ตรวจสอบว่า Supabase library โหลดแล้วหรือยัง
         if (typeof window.supabase === 'undefined') {
-            console.error('Supabase library not loaded');
+            showDebugInfo('❌ Supabase library ไม่พบ');
             updateConnectionStatus(false);
             return false;
         }
         
+        showDebugInfo('✅ Supabase library พบแล้ว');
+        
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        showDebugInfo('✅ Supabase client สร้างเรียบร้อย');
         
         // ทดสอบการเชื่อมต่อ
-        testConnection();
+        await testConnection();
         
         return true;
     } catch (error) {
+        showDebugInfo('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
         console.error('Supabase connection error:', error);
         updateConnectionStatus(false);
         return false;
@@ -742,23 +750,44 @@ function initializeSupabase() {
 
 // ฟังก์ชันทดสอบการเชื่อมต่อ
 async function testConnection() {
+    showDebugInfo('กำลังทดสอบการเชื่อมต่อฐานข้อมูล...');
+    
     try {
-        // ลองดึงข้อมูลจากตาราง documents
-        const { data, error } = await supabase
-            .from('documents')
-            .select('count', { count: 'exact' })
-            .limit(1);
-        
-        if (error) {
-            console.error('Database connection test failed:', error);
+        if (!supabase) {
+            showDebugInfo('❌ Supabase client ไม่พบ');
             updateConnectionStatus(false);
             return false;
         }
         
+        // ลองทำ query ง่ายๆ เพื่อทดสอบ
+        const { data, error } = await supabase
+            .from('documents')
+            .select('id')
+            .limit(1);
+        
+        if (error) {
+            showDebugInfo(`❌ Database error: ${error.message}`);
+            console.error('Database connection test failed:', error);
+            
+            // ถ้า error เป็นเรื่อง permission หรือ table ไม่พบ ให้แสดงคำแนะนำ
+            if (error.message.includes('relation "documents" does not exist')) {
+                showDebugInfo('⚠️ ตาราง documents ไม่พบ - กรุณาสร้างตารางใน Supabase');
+                showDebugInfo('📋 SQL สำหรับสร้างตาราง: CREATE TABLE documents (id SERIAL PRIMARY KEY, type VARCHAR(20) NOT NULL, doc_number VARCHAR(100) NOT NULL, document_date DATE NOT NULL, organization TEXT NOT NULL, doc_type VARCHAR(50) NOT NULL, subject TEXT NOT NULL, priority VARCHAR(20), responsible VARCHAR(100), send_method VARCHAR(50), sender VARCHAR(100), notes TEXT, status VARCHAR(20) DEFAULT \'active\', created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());');
+            } else if (error.message.includes('permission')) {
+                showDebugInfo('⚠️ ปัญหา Permission - กรุณาตรวจสอบ RLS Policy ใน Supabase');
+                showDebugInfo('💡 แนะนำ: ALTER TABLE documents DISABLE ROW LEVEL SECURITY;');
+            }
+            
+            updateConnectionStatus(false);
+            return false;
+        }
+        
+        showDebugInfo(`✅ เชื่อมต่อฐานข้อมูลสำเร็จ - พบข้อมูล ${data?.length || 0} รายการ`);
         isConnected = true;
         updateConnectionStatus(true);
         return true;
     } catch (error) {
+        showDebugInfo(`❌ Connection test error: ${error.message}`);
         console.error('Connection test error:', error);
         updateConnectionStatus(false);
         return false;
@@ -771,9 +800,16 @@ function updateConnectionStatus(connected) {
     if (connected) {
         statusElement.className = 'connection-status status-online';
         statusElement.innerHTML = '🟢 เชื่อมต่อฐานข้อมูลสำเร็จ';
+        // ซ่อน debug info เมื่อเชื่อมต่อสำเร็จ
+        const debugElement = document.getElementById('debugInfo');
+        if (debugElement) {
+            setTimeout(() => {
+                debugElement.style.display = 'none';
+            }, 3000);
+        }
     } else {
         statusElement.className = 'connection-status status-offline';
-        statusElement.innerHTML = '🔴 ใช้งานแบบออฟไลน์ (บันทึกในเครื่อง)';
+        statusElement.innerHTML = '🟡 ใช้งานแบบออฟไลน์ (บันทึกในเครื่อง)';
     }
 }
 
@@ -823,20 +859,26 @@ async function loadDocuments() {
     
     try {
         if (isConnected && supabase) {
+            showDebugInfo('กำลังโหลดข้อมูลจาก Supabase...');
+            
             const { data, error } = await supabase
                 .from('documents')
                 .select('*')
                 .order('created_at', { ascending: false });
             
             if (error) {
+                showDebugInfo(`❌ Database error: ${error.message}`);
                 console.error('Database error:', error);
                 throw error;
             }
             
             documents = data || [];
+            showDebugInfo(`✅ โหลดข้อมูลสำเร็จ ${documents.length} รายการ`);
         } else {
             // ใช้ localStorage เป็น fallback
+            showDebugInfo('โหลดข้อมูลจาก localStorage...');
             documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
+            showDebugInfo(`📁 พบข้อมูลใน localStorage ${documents.length} รายการ`);
         }
         
         displayDocuments();
@@ -858,23 +900,29 @@ async function refreshDocuments() {
 async function saveDocument(docData) {
     try {
         if (isConnected && supabase) {
+            showDebugInfo('กำลังบันทึกข้อมูลใน Supabase...');
+            
             const { data, error } = await supabase
                 .from('documents')
                 .insert([docData])
                 .select();
             
             if (error) {
+                showDebugInfo(`❌ Insert error: ${error.message}`);
                 console.error('Insert error:', error);
                 throw error;
             }
             
+            showDebugInfo('✅ บันทึกข้อมูลใน Supabase สำเร็จ');
             return data[0];
         } else {
             // ใช้ localStorage เป็น fallback
+            showDebugInfo('บันทึกข้อมูลใน localStorage...');
             docData.id = Date.now();
             docData.created_at = new Date().toISOString();
             documents.push(docData);
             localStorage.setItem('policeDocuments', JSON.stringify(documents));
+            showDebugInfo('✅ บันทึกข้อมูลใน localStorage สำเร็จ');
             return docData;
         }
     } catch (error) {
@@ -1367,6 +1415,7 @@ function initializeSampleData() {
         localStorage.setItem('policeDocuments', JSON.stringify(documents));
         displayDocuments();
         updateStats();
+        showDebugInfo('✅ สร้างข้อมูลตัวอย่าง 3 รายการ');
     }
 }
 
@@ -1387,7 +1436,7 @@ function initializeModalEvents() {
 }
 
 // ฟังก์ชันเริ่มต้นระบบทั้งหมด
-function initializeSystem() {
+async function initializeSystem() {
     // ตั้งค่าวันที่เริ่มต้น
     const today = new Date().toISOString().split('T')[0];
     const receiveDateInput = document.getElementById('receiveDate');
@@ -1397,7 +1446,7 @@ function initializeSystem() {
     if (sendDateInput) sendDateInput.value = today;
     
     // เชื่อมต่อฐานข้อมูล
-    initializeSupabase();
+    await initializeSupabase();
     
     // เริ่มต้น event listeners
     initializeRegisterForm();
@@ -1407,10 +1456,9 @@ function initializeSystem() {
     initializeModalEvents();
     
     // โหลดข้อมูลเริ่มต้น
-    loadDocuments().then(() => {
-        updateStats();
-        initializeSampleData();
-    });
+    await loadDocuments();
+    updateStats();
+    initializeSampleData();
 }
 
 // เริ่มต้นระบบเมื่อหน้าเว็บโหลดเสร็จ
