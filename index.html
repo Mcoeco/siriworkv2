@@ -675,7 +675,7 @@ async function insertDocument(docData) {
             send_method: docData.sendMethod || null,
             notes: docData.notes || null,
             status: docData.status,
-            type: docData.type  // <-- แก้ตรงนี้ให้ตรงกับ DB
+            type: docData.type
         }]).select();
 
         if (error) throw error;
@@ -739,6 +739,7 @@ function displayDocuments() {
                 <div class="status-badge status-${doc.type === 'received' ? 'received' : 'sent'}">
                     ${doc.type === 'received' ? '📥 รับ' : '📤 ส่ง'}
                 </div>
+                <button class="btn btn-primary" onclick="editDocument(${doc.id})" style="padding:5px 10px;font-size:12px;">✏️ แก้ไข</button>
                 <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding:5px 10px;font-size:12px;">🗑️ ลบ</button>
             </div>
             <div class="document-details">
@@ -749,6 +750,27 @@ function displayDocuments() {
             <div class="detail-item"><div class="detail-label">เรื่อง</div><div class="detail-value" style="font-weight:600;color:#1e3c72;">${doc.subject}</div></div>
         </div>
     `).join('');
+}
+
+// ✅ Edit
+async function editDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+
+    const newSubject = prompt("แก้ไขเรื่อง:", doc.subject);
+    if (newSubject === null) return;
+
+    try {
+        const { error } = await db.from('documents')
+            .update({ subject: newSubject })
+            .eq('id', id);
+
+        if (error) throw error;
+        await loadDocuments();
+        showAlert("✏️ แก้ไขแล้ว", "success");
+    } catch (err) {
+        showAlert("แก้ไขไม่สำเร็จ: " + err.message, "error");
+    }
 }
 
 // ✅ Delete wrapper
@@ -777,21 +799,74 @@ async function updateStats() {
     document.getElementById('todayCount').textContent = todayDocs;
 }
 
-// ✅ Export
+// ✅ Export (multi-format)
 async function exportData() {
-    try {
-        const dataStr = JSON.stringify(documents, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `documents_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showAlert('📁 ส่งออกแล้ว');
-    } catch (error) {
-        showAlert('ส่งออกไม่สำเร็จ: ' + error.message, 'error');
+    const options = [
+        { key: "json", label: "📁 JSON" },
+        { key: "html", label: "🌐 HTML" },
+        { key: "excel", label: "📊 Excel (CSV)" },
+        { key: "pdf", label: "📄 PDF" },
+        { key: "word", label: "📝 Word (DOC)" },
+        { key: "print", label: "🖨️ พิมพ์เอกสาร" }
+    ];
+
+    const selected = prompt("เลือกประเภทไฟล์ที่ต้องการ (คั่นด้วย , ):\n" + 
+        options.map(o => `${o.key} = ${o.label}`).join("\n"));
+
+    if (!selected) return;
+    const formats = selected.split(",").map(s => s.trim().toLowerCase());
+
+    for (let f of formats) {
+        if (f === "json") {
+            const blob = new Blob([JSON.stringify(documents, null, 2)], { type: "application/json" });
+            downloadFile(blob, "documents.json");
+        }
+        else if (f === "html") {
+            let html = `<html><body><h2>รายการเอกสาร</h2><ul>`;
+            documents.forEach(d => {
+                html += `<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`;
+            });
+            html += `</ul></body></html>`;
+            const blob = new Blob([html], { type: "text/html" });
+            downloadFile(blob, "documents.html");
+        }
+        else if (f === "excel") {
+            const csv = documents.map(d => `${d.doc_number},${d.subject},${d.organization}`).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            downloadFile(blob, "documents.csv");
+        }
+        else if (f === "pdf") {
+            const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
+            const blob = new Blob([content], { type: "application/pdf" });
+            downloadFile(blob, "documents.pdf");
+        }
+        else if (f === "word") {
+            const content = documents.map(d => `${d.doc_number} - ${d.subject}`).join("\n");
+            const blob = new Blob([content], { type: "application/msword" });
+            downloadFile(blob, "documents.doc");
+        }
+        else if (f === "print") {
+            const printWin = window.open("", "", "width=800,height=600");
+            printWin.document.write("<h2>รายการเอกสาร</h2>");
+            printWin.document.write("<ul>");
+            documents.forEach(d => {
+                printWin.document.write(`<li>${d.doc_number} - ${d.subject} (${d.organization})</li>`);
+            });
+            printWin.document.write("</ul>");
+            printWin.document.close();
+            printWin.print();
+        }
     }
+    showAlert("✅ ส่งออกเรียบร้อย");
+}
+
+function downloadFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // ✅ Init
@@ -805,7 +880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         try {
             await insertDocument({
-                type: 'received',   // ต้องกำหนด
+                type: 'received',
                 docNumber: document.getElementById('docNumber').value,
                 date: document.getElementById('receiveDate').value,
                 organization: document.getElementById('fromOrg').value,
@@ -831,7 +906,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         try {
             await insertDocument({
-                type: 'sent',  // ต้องกำหนด
+                type: 'sent',
                 docNumber: document.getElementById('sendDocNumber').value,
                 date: document.getElementById('sendDate').value,
                 organization: document.getElementById('toOrg').value,
@@ -863,7 +938,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
-    
 </script>
 
 </body>
