@@ -698,194 +698,252 @@
     </div>
 
     <script>
-        // การตั้งค่า Supabase
-        let supabase = null;
-        let isConnected = false;
+// การตั้งค่า Supabase
+let supabase = null;
+let isConnected = false;
+
+// ตัวแปรสำหรับจัดเก็บข้อมูล
+let documents = [];
+let currentFilter = 'all';
+
+// ฟังก์ชันเชื่อมต่อ Supabase
+function initializeSupabase() {
+    // ใส่ URL และ API Key ของ Supabase ที่นี่
+    const SUPABASE_URL = 'https://kowaztnpsharqdroiliv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
+    
+    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+        // ใช้ localStorage เป็น fallback ถ้าไม่ได้ตั้งค่า Supabase
+        documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
+        updateConnectionStatus(false);
+        return false;
+    }
+    
+    try {
+        // ตรวจสอบว่า Supabase library โหลดแล้วหรือยัง
+        if (typeof window.supabase === 'undefined') {
+            console.error('Supabase library not loaded');
+            updateConnectionStatus(false);
+            return false;
+        }
         
-        // ตัวแปรสำหรับจัดเก็บข้อมูล
-        let documents = [];
-        let currentFilter = 'all';
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // ฟังก์ชันเชื่อมต่อ Supabase
-        function initializeSupabase() {
-            // ใส่ URL และ API Key ของ Supabase ที่นี่
-            const SUPABASE_URL = 'https://kowaztnpsharqdroiliv.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
+        // ทดสอบการเชื่อมต่อ
+        testConnection();
+        
+        return true;
+    } catch (error) {
+        console.error('Supabase connection error:', error);
+        updateConnectionStatus(false);
+        return false;
+    }
+}
+
+// ฟังก์ชันทดสอบการเชื่อมต่อ
+async function testConnection() {
+    try {
+        // ลองดึงข้อมูลจากตาราง documents
+        const { data, error } = await supabase
+            .from('documents')
+            .select('count', { count: 'exact' })
+            .limit(1);
+        
+        if (error) {
+            console.error('Database connection test failed:', error);
+            updateConnectionStatus(false);
+            return false;
+        }
+        
+        isConnected = true;
+        updateConnectionStatus(true);
+        return true;
+    } catch (error) {
+        console.error('Connection test error:', error);
+        updateConnectionStatus(false);
+        return false;
+    }
+}
+
+// อัพเดทสถานะการเชื่อมต่อ
+function updateConnectionStatus(connected) {
+    const statusElement = document.getElementById('connectionStatus');
+    if (connected) {
+        statusElement.className = 'connection-status status-online';
+        statusElement.innerHTML = '🟢 เชื่อมต่อฐานข้อมูลสำเร็จ';
+    } else {
+        statusElement.className = 'connection-status status-offline';
+        statusElement.innerHTML = '🔴 ใช้งานแบบออฟไลน์ (บันทึกในเครื่อง)';
+    }
+}
+
+// ฟังก์ชันแสดง loading
+function showLoading(show = true) {
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = show ? 'block' : 'none';
+    }
+}
+
+// ฟังก์ชันแสดงแจ้งเตือน
+function showAlert(message, type = 'success') {
+    const alert = document.getElementById('alert');
+    if (alert) {
+        alert.textContent = message;
+        alert.className = `alert alert-${type} show`;
+        
+        setTimeout(() => {
+            alert.classList.remove('show');
+        }, 3000);
+    }
+}
+
+// ฟังก์ชันเปลี่ยนแท็บ
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    document.getElementById(tabName).classList.add('active');
+    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+    
+    if (tabName === 'search') {
+        loadDocuments();
+    } else if (tabName === 'stats') {
+        updateStats();
+    }
+}
+
+// ฟังก์ชันโหลดเอกสารจากฐานข้อมูล
+async function loadDocuments() {
+    showLoading(true);
+    
+    try {
+        if (isConnected && supabase) {
+            const { data, error } = await supabase
+                .from('documents')
+                .select('*')
+                .order('created_at', { ascending: false });
             
-            if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-                // ใช้ localStorage เป็น fallback ถ้าไม่ได้ตั้งค่า Supabase
-                documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
-                updateConnectionStatus(false);
-                return false;
-            }
-            
-            try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                isConnected = true;
-                updateConnectionStatus(true);
-                return true;
-            } catch (error) {
-                console.error('Supabase connection error:', error);
-                updateConnectionStatus(false);
-                return false;
-            }
-        }
-        
-        // อัพเดทสถานะการเชื่อมต่อ
-        function updateConnectionStatus(connected) {
-            const statusElement = document.getElementById('connectionStatus');
-            if (connected) {
-                statusElement.className = 'connection-status status-online';
-                statusElement.innerHTML = '🟢 เชื่อมต่อฐานข้อมูลสำเร็จ';
-            } else {
-                statusElement.className = 'connection-status status-offline';
-                statusElement.innerHTML = '🔴 ใช้งานแบบออฟไลน์ (บันทึกในเครื่อง)';
-            }
-        }
-        
-        // ฟังก์ชันแสดง loading
-        function showLoading(show = true) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-        
-        // ฟังก์ชันแสดงแจ้งเตือน
-        function showAlert(message, type = 'success') {
-            const alert = document.getElementById('alert');
-            alert.textContent = message;
-            alert.className = `alert alert-${type} show`;
-            
-            setTimeout(() => {
-                alert.classList.remove('show');
-            }, 3000);
-        }
-        
-        // ฟังก์ชันเปลี่ยนแท็บ
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(tabName).classList.add('active');
-            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-            
-            if (tabName === 'search') {
-                loadDocuments();
-            } else if (tabName === 'stats') {
-                updateStats();
-            }
-        }
-        
-        // ฟังก์ชันโหลดเอกสารจากฐานข้อมูล
-        async function loadDocuments() {
-            showLoading(true);
-            
-            try {
-                if (isConnected && supabase) {
-                    const { data, error } = await supabase
-                        .from('documents')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-                    
-                    if (error) throw error;
-                    documents = data || [];
-                } else {
-                    // ใช้ localStorage เป็น fallback
-                    documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
-                }
-                
-                displayDocuments();
-            } catch (error) {
-                console.error('Error loading documents:', error);
-                showAlert('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // ฟังก์ชันรีเฟรชข้อมูล
-        async function refreshDocuments() {
-            await loadDocuments();
-            showAlert('รีเฟรชข้อมูลเรียบร้อย');
-        }
-        
-        // ฟังก์ชันบันทึกเอกสารใหม่
-        async function saveDocument(docData) {
-            try {
-                if (isConnected && supabase) {
-                    const { data, error } = await supabase
-                        .from('documents')
-                        .insert([docData])
-                        .select();
-                    
-                    if (error) throw error;
-                    return data[0];
-                } else {
-                    // ใช้ localStorage เป็น fallback
-                    docData.id = Date.now();
-                    docData.created_at = new Date().toISOString();
-                    documents.push(docData);
-                    localStorage.setItem('policeDocuments', JSON.stringify(documents));
-                    return docData;
-                }
-            } catch (error) {
-                console.error('Error saving document:', error);
+            if (error) {
+                console.error('Database error:', error);
                 throw error;
             }
+            
+            documents = data || [];
+        } else {
+            // ใช้ localStorage เป็น fallback
+            documents = JSON.parse(localStorage.getItem('policeDocuments')) || [];
         }
         
-        // ฟังก์ชันอัพเดทเอกสาร
-        async function updateDocument(id, docData) {
-            try {
-                if (isConnected && supabase) {
-                    const { data, error } = await supabase
-                        .from('documents')
-                        .update(docData)
-                        .eq('id', id)
-                        .select();
-                    
-                    if (error) throw error;
-                    return data[0];
-                } else {
-                    // ใช้ localStorage เป็น fallback
-                    const index = documents.findIndex(doc => doc.id === id);
-                    if (index !== -1) {
-                        documents[index] = { ...documents[index], ...docData };
-                        localStorage.setItem('policeDocuments', JSON.stringify(documents));
-                        return documents[index];
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating document:', error);
+        displayDocuments();
+    } catch (error) {
+        console.error('Error loading documents:', error);
+        showAlert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ฟังก์ชันรีเฟรชข้อมูล
+async function refreshDocuments() {
+    await loadDocuments();
+    showAlert('รีเฟรชข้อมูลเรียบร้อย');
+}
+
+// ฟังก์ชันบันทึกเอกสารใหม่
+async function saveDocument(docData) {
+    try {
+        if (isConnected && supabase) {
+            const { data, error } = await supabase
+                .from('documents')
+                .insert([docData])
+                .select();
+            
+            if (error) {
+                console.error('Insert error:', error);
                 throw error;
             }
+            
+            return data[0];
+        } else {
+            // ใช้ localStorage เป็น fallback
+            docData.id = Date.now();
+            docData.created_at = new Date().toISOString();
+            documents.push(docData);
+            localStorage.setItem('policeDocuments', JSON.stringify(documents));
+            return docData;
         }
-        
-        // ฟังก์ชันลบเอกสาร
-        async function deleteDocumentFromDB(id) {
-            try {
-                if (isConnected && supabase) {
-                    const { error } = await supabase
-                        .from('documents')
-                        .delete()
-                        .eq('id', id);
-                    
-                    if (error) throw error;
-                } else {
-                    // ใช้ localStorage เป็น fallback
-                    documents = documents.filter(doc => doc.id !== id);
-                    localStorage.setItem('policeDocuments', JSON.stringify(documents));
-                }
-            } catch (error) {
-                console.error('Error deleting document:', error);
+    } catch (error) {
+        console.error('Error saving document:', error);
+        throw error;
+    }
+}
+
+// ฟังก์ชันอัพเดทเอกสาร
+async function updateDocument(id, docData) {
+    try {
+        if (isConnected && supabase) {
+            const { data, error } = await supabase
+                .from('documents')
+                .update(docData)
+                .eq('id', id)
+                .select();
+            
+            if (error) {
+                console.error('Update error:', error);
                 throw error;
             }
+            
+            return data[0];
+        } else {
+            // ใช้ localStorage เป็น fallback
+            const index = documents.findIndex(doc => doc.id === id);
+            if (index !== -1) {
+                documents[index] = { ...documents[index], ...docData };
+                localStorage.setItem('policeDocuments', JSON.stringify(documents));
+                return documents[index];
+            }
+            throw new Error('Document not found');
         }
-        
-        // ฟังก์ชันจัดการฟอร์มลงทะเบียนรับ
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    } catch (error) {
+        console.error('Error updating document:', error);
+        throw error;
+    }
+}
+
+// ฟังก์ชันลบเอกสาร
+async function deleteDocumentFromDB(id) {
+    try {
+        if (isConnected && supabase) {
+            const { error } = await supabase
+                .from('documents')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                console.error('Delete error:', error);
+                throw error;
+            }
+        } else {
+            // ใช้ localStorage เป็น fallback
+            documents = documents.filter(doc => doc.id !== id);
+            localStorage.setItem('policeDocuments', JSON.stringify(documents));
+        }
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        throw error;
+    }
+}
+
+// ฟังก์ชันจัดการฟอร์มลงทะเบียนรับ
+function initializeRegisterForm() {
+    const form = document.getElementById('registerForm');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const docData = {
@@ -909,14 +967,19 @@
                 this.reset();
                 document.getElementById('receiveDate').value = new Date().toISOString().split('T')[0];
             } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
         });
-        
-        // ฟังก์ชันจัดการฟอร์มลงทะเบียนส่ง
-        document.getElementById('sendForm').addEventListener('submit', async function(e) {
+    }
+}
+
+// ฟังก์ชันจัดการฟอร์มลงทะเบียนส่ง
+function initializeSendForm() {
+    const form = document.getElementById('sendForm');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const docData = {
@@ -940,182 +1003,195 @@
                 this.reset();
                 document.getElementById('sendDate').value = new Date().toISOString().split('T')[0];
             } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
         });
-        
-        // ฟังก์ชันค้นหาเอกสาร
-        document.getElementById('searchInput').addEventListener('input', function() {
+    }
+}
+
+// ฟังก์ชันค้นหาเอกสาร
+function initializeSearchInput() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
             displayDocuments();
         });
-        
-        // ฟังก์ชันกรองเอกสาร
-        function filterDocuments(filter) {
-            currentFilter = filter;
-            displayDocuments();
-        }
-        
-        // ฟังก์ชันแสดงเอกสาร
-        function displayDocuments() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const container = document.getElementById('documentsList');
-            
-            let filteredDocs = documents;
-            
-            // กรองตามประเภท
-            if (currentFilter === 'received') {
-                filteredDocs = documents.filter(doc => doc.type === 'received');
-            } else if (currentFilter === 'sent') {
-                filteredDocs = documents.filter(doc => doc.type === 'sent');
-            }
-            
-            // ค้นหา
-            if (searchTerm) {
-                filteredDocs = filteredDocs.filter(doc => 
-                    (doc.doc_number || '').toLowerCase().includes(searchTerm) ||
-                    (doc.subject || '').toLowerCase().includes(searchTerm) ||
-                    (doc.organization || '').toLowerCase().includes(searchTerm) ||
-                    (doc.doc_type || '').toLowerCase().includes(searchTerm)
-                );
-            }
-            
-            if (filteredDocs.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">ไม่พบเอกสาร</div>';
-                return;
-            }
-            
-            container.innerHTML = filteredDocs.map(doc => `
-                <div class="document-card">
-                    <div class="document-header">
-                        <div class="document-number">${doc.doc_number}</div>
-                        <div class="document-actions">
-                            <div class="status-badge status-${doc.type === 'received' ? 'received' : 'sent'}">
-                                ${doc.type === 'received' ? '📥 รับ' : '📤 ส่ง'}
-                            </div>
-                            <button class="btn btn-info" onclick="editDocument(${doc.id})" style="padding: 5px 10px; font-size: 12px;">✏️ แก้ไข</button>
-                            <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding: 5px 10px; font-size: 12px;">🗑️ ลบ</button>
-                        </div>
+    }
+}
+
+// ฟังก์ชันกรองเอกสาร
+function filterDocuments(filter) {
+    currentFilter = filter;
+    displayDocuments();
+}
+
+// ฟังก์ชันแสดงเอกสาร
+function displayDocuments() {
+    const searchInput = document.getElementById('searchInput');
+    const container = document.getElementById('documentsList');
+    
+    if (!container) return;
+    
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    let filteredDocs = documents;
+    
+    // กรองตามประเภท
+    if (currentFilter === 'received') {
+        filteredDocs = documents.filter(doc => doc.type === 'received');
+    } else if (currentFilter === 'sent') {
+        filteredDocs = documents.filter(doc => doc.type === 'sent');
+    }
+    
+    // ค้นหา
+    if (searchTerm) {
+        filteredDocs = filteredDocs.filter(doc => 
+            (doc.doc_number || '').toLowerCase().includes(searchTerm) ||
+            (doc.subject || '').toLowerCase().includes(searchTerm) ||
+            (doc.organization || '').toLowerCase().includes(searchTerm) ||
+            (doc.doc_type || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (filteredDocs.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">ไม่พบเอกสาร</div>';
+        return;
+    }
+    
+    container.innerHTML = filteredDocs.map(doc => `
+        <div class="document-card">
+            <div class="document-header">
+                <div class="document-number">${doc.doc_number}</div>
+                <div class="document-actions">
+                    <div class="status-badge status-${doc.type === 'received' ? 'received' : 'sent'}">
+                        ${doc.type === 'received' ? '📥 รับ' : '📤 ส่ง'}
                     </div>
-                    
-                    <div class="document-details">
-                        <div class="detail-item">
-                            <div class="detail-label">วันที่</div>
-                            <div class="detail-value">${new Date(doc.document_date).toLocaleDateString('th-TH')}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">${doc.type === 'received' ? 'จาก' : 'ส่งถึง'}</div>
-                            <div class="detail-value">${doc.organization}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">ประเภท</div>
-                            <div class="detail-value">${doc.doc_type}</div>
-                        </div>
-                        ${doc.type === 'received' && doc.priority ? `
-                            <div class="detail-item">
-                                <div class="detail-label">ความเร่งด่วน</div>
-                                <div class="detail-value">${doc.priority}</div>
-                            </div>
-                        ` : ''}
-                        ${doc.type === 'sent' && doc.send_method ? `
-                            <div class="detail-item">
-                                <div class="detail-label">ช่องทางส่ง</div>
-                                <div class="detail-value">${doc.send_method}</div>
-                            </div>
-                        ` : ''}
-                        ${doc.responsible || doc.sender ? `
-                            <div class="detail-item">
-                                <div class="detail-label">${doc.type === 'received' ? 'ผู้รับผิดชอบ' : 'ผู้ส่ง'}</div>
-                                <div class="detail-value">${doc.responsible || doc.sender || '-'}</div>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">เรื่อง</div>
-                        <div class="detail-value" style="font-weight: 600; color: #1e3c72;">${doc.subject}</div>
-                    </div>
-                    
-                    ${doc.notes ? `
-                        <div class="detail-item" style="margin-top: 15px;">
-                            <div class="detail-label">หมายเหตุ</div>
-                            <div class="detail-value">${doc.notes}</div>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e5e9; font-size: 12px; color: #666;">
-                        บันทึกเมื่อ: ${new Date(doc.created_at).toLocaleString('th-TH')}
-                    </div>
+                    <button class="btn btn-info" onclick="editDocument(${doc.id})" style="padding: 5px 10px; font-size: 12px;">✏️ แก้ไข</button>
+                    <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding: 5px 10px; font-size: 12px;">🗑️ ลบ</button>
                 </div>
-            `).join('');
-        }
-        
-        // ฟังก์ชันแก้ไขเอกสาร
-        function editDocument(id) {
-            const doc = documents.find(d => d.id === id);
-            if (!doc) return;
+            </div>
             
-            // เติมข้อมูลในฟอร์มแก้ไข
-            document.getElementById('editId').value = doc.id;
-            document.getElementById('editDocNumber').value = doc.doc_number;
-            document.getElementById('editDate').value = doc.document_date;
-            document.getElementById('editOrganization').value = doc.organization;
-            document.getElementById('editDocType').value = doc.doc_type;
-            document.getElementById('editSubject').value = doc.subject;
-            document.getElementById('editNotes').value = doc.notes || '';
+            <div class="document-details">
+                <div class="detail-item">
+                    <div class="detail-label">วันที่</div>
+                    <div class="detail-value">${new Date(doc.document_date).toLocaleDateString('th-TH')}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">${doc.type === 'received' ? 'จาก' : 'ส่งถึง'}</div>
+                    <div class="detail-value">${doc.organization}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">ประเภท</div>
+                    <div class="detail-value">${doc.doc_type}</div>
+                </div>
+                ${doc.type === 'received' && doc.priority ? `
+                    <div class="detail-item">
+                        <div class="detail-label">ความเร่งด่วน</div>
+                        <div class="detail-value">${doc.priority}</div>
+                    </div>
+                ` : ''}
+                ${doc.type === 'sent' && doc.send_method ? `
+                    <div class="detail-item">
+                        <div class="detail-label">ช่องทางส่ง</div>
+                        <div class="detail-value">${doc.send_method}</div>
+                    </div>
+                ` : ''}
+                ${doc.responsible || doc.sender ? `
+                    <div class="detail-item">
+                        <div class="detail-label">${doc.type === 'received' ? 'ผู้รับผิดชอบ' : 'ผู้ส่ง'}</div>
+                        <div class="detail-value">${doc.responsible || doc.sender || '-'}</div>
+                    </div>
+                ` : ''}
+            </div>
             
-            // แสดงฟิลด์เฉพาะตามประเภทเอกสาร
-            const extraFields = document.getElementById('editExtraFields');
-            const orgLabel = document.getElementById('editOrgLabel');
+            <div class="detail-item">
+                <div class="detail-label">เรื่อง</div>
+                <div class="detail-value" style="font-weight: 600; color: #1e3c72;">${doc.subject}</div>
+            </div>
             
-            if (doc.type === 'received') {
-                orgLabel.textContent = 'จาก (หน่วยงาน)';
-                extraFields.innerHTML = `
-                    <div class="form-group">
-                        <label>ความเร่งด่วน</label>
-                        <select id="editPriority">
-                            <option value="ปกติ" ${doc.priority === 'ปกติ' ? 'selected' : ''}>ปกติ</option>
-                            <option value="ด่วน" ${doc.priority === 'ด่วน' ? 'selected' : ''}>ด่วน</option>
-                            <option value="ด่วนมาก" ${doc.priority === 'ด่วนมาก' ? 'selected' : ''}>ด่วนมาก</option>
-                            <option value="ด่วนที่สุด" ${doc.priority === 'ด่วนที่สุด' ? 'selected' : ''}>ด่วนที่สุด</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>ผู้รับผิดชอบ</label>
-                        <input type="text" id="editResponsible" value="${doc.responsible || ''}">
-                    </div>
-                `;
-            } else {
-                orgLabel.textContent = 'ส่งถึง (หน่วยงาน)';
-                extraFields.innerHTML = `
-                    <div class="form-group">
-                        <label>ช่องทางการส่ง</label>
-                        <select id="editSendMethod">
-                            <option value="มือ" ${doc.send_method === 'มือ' ? 'selected' : ''}>ส่งด้วยมือ</option>
-                            <option value="ไปรษณีย์" ${doc.send_method === 'ไปรษณีย์' ? 'selected' : ''}>ไปรษณีย์</option>
-                            <option value="โทรสาร" ${doc.send_method === 'โทรสาร' ? 'selected' : ''}>โทรสาร</option>
-                            <option value="อีเมล" ${doc.send_method === 'อีเมล' ? 'selected' : ''}>อีเมล</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>ผู้ส่ง</label>
-                        <input type="text" id="editSender" value="${doc.sender || ''}">
-                    </div>
-                `;
-            }
+            ${doc.notes ? `
+                <div class="detail-item" style="margin-top: 15px;">
+                    <div class="detail-label">หมายเหตุ</div>
+                    <div class="detail-value">${doc.notes}</div>
+                </div>
+            ` : ''}
             
-            // แสดง modal
-            document.getElementById('editModal').style.display = 'block';
-        }
-        
-        // ฟังก์ชันปิด modal
-        function closeEditModal() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-        
-        // ฟังก์ชันจัดการฟอร์มแก้ไข
-        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e5e9; font-size: 12px; color: #666;">
+                บันทึกเมื่อ: ${new Date(doc.created_at).toLocaleString('th-TH')}
+            </div>
+        </div>
+    `).join('');
+}
+
+// ฟังก์ชันแก้ไขเอกสาร
+function editDocument(id) {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+    
+    // เติมข้อมูลในฟอร์มแก้ไข
+    document.getElementById('editId').value = doc.id;
+    document.getElementById('editDocNumber').value = doc.doc_number;
+    document.getElementById('editDate').value = doc.document_date;
+    document.getElementById('editOrganization').value = doc.organization;
+    document.getElementById('editDocType').value = doc.doc_type;
+    document.getElementById('editSubject').value = doc.subject;
+    document.getElementById('editNotes').value = doc.notes || '';
+    
+    // แสดงฟิลด์เฉพาะตามประเภทเอกสาร
+    const extraFields = document.getElementById('editExtraFields');
+    const orgLabel = document.getElementById('editOrgLabel');
+    
+    if (doc.type === 'received') {
+        orgLabel.textContent = 'จาก (หน่วยงาน)';
+        extraFields.innerHTML = `
+            <div class="form-group">
+                <label>ความเร่งด่วน</label>
+                <select id="editPriority">
+                    <option value="ปกติ" ${doc.priority === 'ปกติ' ? 'selected' : ''}>ปกติ</option>
+                    <option value="ด่วน" ${doc.priority === 'ด่วน' ? 'selected' : ''}>ด่วน</option>
+                    <option value="ด่วนมาก" ${doc.priority === 'ด่วนมาก' ? 'selected' : ''}>ด่วนมาก</option>
+                    <option value="ด่วนที่สุด" ${doc.priority === 'ด่วนที่สุด' ? 'selected' : ''}>ด่วนที่สุด</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ผู้รับผิดชอบ</label>
+                <input type="text" id="editResponsible" value="${doc.responsible || ''}">
+            </div>
+        `;
+    } else {
+        orgLabel.textContent = 'ส่งถึง (หน่วยงาน)';
+        extraFields.innerHTML = `
+            <div class="form-group">
+                <label>ช่องทางการส่ง</label>
+                <select id="editSendMethod">
+                    <option value="มือ" ${doc.send_method === 'มือ' ? 'selected' : ''}>ส่งด้วยมือ</option>
+                    <option value="ไปรษณีย์" ${doc.send_method === 'ไปรษณีย์' ? 'selected' : ''}>ไปรษณีย์</option>
+                    <option value="โทรสาร" ${doc.send_method === 'โทรสาร' ? 'selected' : ''}>โทรสาร</option>
+                    <option value="อีเมล" ${doc.send_method === 'อีเมล' ? 'selected' : ''}>อีเมล</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ผู้ส่ง</label>
+                <input type="text" id="editSender" value="${doc.sender || ''}">
+            </div>
+        `;
+    }
+    
+    // แสดง modal
+    document.getElementById('editModal').style.display = 'block';
+}
+
+// ฟังก์ชันปิด modal
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// ฟังก์ชันจัดการฟอร์มแก้ไข
+function initializeEditForm() {
+    const form = document.getElementById('editForm');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const id = parseInt(document.getElementById('editId').value);
@@ -1151,161 +1227,194 @@
                 closeEditModal();
                 showAlert('แก้ไขข้อมูลเรียบร้อยแล้ว');
             } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการแก้ไขข้อมูล', 'error');
+                showAlert('เกิดข้อผิดพลาดในการแก้ไขข้อมูล: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
         });
-        
-        // ฟังก์ชันลบเอกสาร
-        async function deleteDocument(id) {
-            if (confirm('คุณต้องการลบเอกสารนี้หรือไม่?')) {
-                try {
-                    showLoading(true);
-                    await deleteDocumentFromDB(id);
-                    await loadDocuments();
-                    showAlert('ลบเอกสารเรียบร้อยแล้ว');
-                } catch (error) {
-                    showAlert('เกิดข้อผิดพลาดในการลบข้อมูล', 'error');
-                } finally {
-                    showLoading(false);
-                }
-            }
-        }
-        
-        // ฟังก์ชันอัพเดทสถิติ
-        function updateStats() {
-            const received = documents.filter(doc => doc.type === 'received').length;
-            const sent = documents.filter(doc => doc.type === 'sent').length;
-            const today = new Date().toISOString().split('T')[0];
-            const todayDocs = documents.filter(doc => doc.document_date === today).length;
-            
-            document.getElementById('totalReceived').textContent = received;
-            document.getElementById('totalSent').textContent = sent;
-            document.getElementById('totalDocuments').textContent = documents.length;
-            document.getElementById('todayCount').textContent = todayDocs;
-            
-            // สถิติรายเดือน
-            const monthlyData = {};
-            documents.forEach(doc => {
-                const month = new Date(doc.document_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long' });
-                if (!monthlyData[month]) {
-                    monthlyData[month] = { received: 0, sent: 0 };
-                }
-                monthlyData[month][doc.type]++;
-            });
-            
-            const monthlyStatsContainer = document.getElementById('monthlyStats');
-            if (Object.keys(monthlyData).length === 0) {
-                monthlyStatsContainer.innerHTML = '<p style="text-align: center; color: #666;">ยังไม่มีข้อมูล</p>';
-            } else {
-                monthlyStatsContainer.innerHTML = Object.entries(monthlyData)
-                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
-                    .map(([month, data]) => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
-                            <div style="font-weight: 600;">${month}</div>
-                            <div style="display: flex; gap: 20px;">
-                                <span style="color: #28a745;">📥 รับ: ${data.received}</span>
-                                <span style="color: #007bff;">📤 ส่ง: ${data.sent}</span>
-                                <span style="font-weight: 600;">รวม: ${data.received + data.sent}</span>
-                            </div>
-                        </div>
-                    `).join('');
-            }
-        }
-        
-        // ฟังก์ชันส่งออกข้อมูล
-        function exportData() {
-            const dataStr = JSON.stringify(documents, null, 2);
-            const dataBlob = new Blob([dataStr], {type:'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `police_documents_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-            showAlert('ส่งออกข้อมูลเรียบร้อยแล้ว');
-        }
-        
-        // Event listeners สำหรับ modal ส่งออก
-        window.addEventListener('click', function(event) {
-            const editModal = document.getElementById('editModal');
-            const exportModal = document.getElementById('exportModal');
-            if (event.target === editModal) {
-                closeEditModal();
-            }
-            if (event.target === exportModal) {
-                closeExportModal();
-            }
-        });
-        
-        // เริ่มต้นระบบ
-        document.addEventListener('DOMContentLoaded', async function() {
-            // เชื่อมต่อฐานข้อมูล
-            initializeSupabase();
-            
-            // ตั้งค่าวันที่เริ่มต้น
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('receiveDate').value = today;
-            document.getElementById('sendDate').value = today;
-            
-            // โหลดข้อมูลเอกสาร
+    }
+}
+
+// ฟังก์ชันลบเอกสาร
+async function deleteDocument(id) {
+    if (confirm('คุณต้องการลบเอกสารนี้หรือไม่?')) {
+        try {
+            showLoading(true);
+            await deleteDocumentFromDB(id);
             await loadDocuments();
-            updateStats();
-            
-            // เพิ่มข้อมูลตัวอย่างถ้าไม่มีข้อมูล
-            if (documents.length === 0 && !isConnected) {
-                const sampleData = [
-                    {
-                        id: 1,
-                        type: 'received',
-                        doc_number: 'น.001/2567',
-                        document_date: '2024-12-01',
-                        organization: 'ผู้ว่าราชการจังหวัดน่าน',
-                        doc_type: 'หนังสือราชการ',
-                        subject: 'เชิญประชุมคณะกรรมการรักษาความปลอดภัย',
-                        priority: 'ปกติ',
-                        responsible: 'พ.ต.อ.สมชาย ใจดี',
-                        notes: 'ประชุมวันที่ 15 ธ.ค. 2567',
-                        status: 'received',
-                        created_at: '2024-12-01T09:30:00.000Z'
-                    },
-                    {
-                        id: 2,
-                        type: 'sent',
-                        doc_number: 'น.002/2567',
-                        document_date: '2024-12-01',
-                        organization: 'สถานีตำรวจภูธรเมืองน่าน',
-                        doc_type: 'รายงาน',
-                        subject: 'รายงานสถานการณ์ความปลอดภัยประจำเดือน',
-                        send_method: 'มือ',
-                        sender: 'ส.ต.ท.วิชัย รักดี',
-                        notes: 'ส่งรายงานประจำเดือน พ.ย. 2567',
-                        status: 'sent',
-                        created_at: '2024-12-01T14:15:00.000Z'
-                    },
-                    {
-                        id: 3,
-                        type: 'received',
-                        doc_number: 'น.003/2567',
-                        document_date: today,
-                        organization: 'กองบังคับการตำรวจภูธรจังหวัดน่าน',
-                        doc_type: 'คำสั่ง',
-                        subject: 'คำสั่งการปฏิบัติงานในช่วงเทศกาลปีใหม่',
-                        priority: 'ด่วน',
-                        responsible: 'พ.ต.ท.วิรัช ศรีสุข',
-                        notes: 'มีผลบังคับใช้ทันที',
-                        status: 'received',
-                        created_at: new Date().toISOString()
-                    }
-                ];
-                
-                documents = sampleData;
-                localStorage.setItem('policeDocuments', JSON.stringify(documents));
-                displayDocuments();
-                updateStats();
+            showAlert('ลบเอกสารเรียบร้อยแล้ว');
+        } catch (error) {
+            showAlert('เกิดข้อผิดพลาดในการลบข้อมูล: ' + error.message, 'error');
+        } finally {
+            showLoading(false);
+        }
+    }
+}
+
+// ฟังก์ชันอัพเดทสถิติ
+function updateStats() {
+    const received = documents.filter(doc => doc.type === 'received').length;
+    const sent = documents.filter(doc => doc.type === 'sent').length;
+    const today = new Date().toISOString().split('T')[0];
+    const todayDocs = documents.filter(doc => doc.document_date === today).length;
+    
+    const elements = {
+        totalReceived: document.getElementById('totalReceived'),
+        totalSent: document.getElementById('totalSent'),
+        totalDocuments: document.getElementById('totalDocuments'),
+        todayCount: document.getElementById('todayCount')
+    };
+    
+    if (elements.totalReceived) elements.totalReceived.textContent = received;
+    if (elements.totalSent) elements.totalSent.textContent = sent;
+    if (elements.totalDocuments) elements.totalDocuments.textContent = documents.length;
+    if (elements.todayCount) elements.todayCount.textContent = todayDocs;
+    
+    // สถิติรายเดือน
+    const monthlyData = {};
+    documents.forEach(doc => {
+        const month = new Date(doc.document_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long' });
+        if (!monthlyData[month]) {
+            monthlyData[month] = { received: 0, sent: 0 };
+        }
+        monthlyData[month][doc.type]++;
+    });
+    
+    const monthlyStatsContainer = document.getElementById('monthlyStats');
+    if (monthlyStatsContainer) {
+        if (Object.keys(monthlyData).length === 0) {
+            monthlyStatsContainer.innerHTML = '<p style="text-align: center; color: #666;">ยังไม่มีข้อมูล</p>';
+        } else {
+            monthlyStatsContainer.innerHTML = Object.entries(monthlyData)
+                .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                .map(([month, data]) => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                        <div style="font-weight: 600;">${month}</div>
+                        <div style="display: flex; gap: 20px;">
+                            <span style="color: #28a745;">📥 รับ: ${data.received}</span>
+                            <span style="color: #007bff;">📤 ส่ง: ${data.sent}</span>
+                            <span style="font-weight: 600;">รวม: ${data.received + data.sent}</span>
+                        </div>
+                    </div>
+                `).join('');
+        }
+    }
+}
+
+// ฟังก์ชันส่งออกข้อมูล
+function exportData() {
+    const dataStr = JSON.stringify(documents, null, 2);
+    const dataBlob = new Blob([dataStr], {type:'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `police_documents_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showAlert('ส่งออกข้อมูลเรียบร้อยแล้ว');
+}
+
+// ฟังก์ชันเริ่มต้นข้อมูลตัวอย่าง
+function initializeSampleData() {
+    if (documents.length === 0 && !isConnected) {
+        const today = new Date().toISOString().split('T')[0];
+        const sampleData = [
+            {
+                id: 1,
+                type: 'received',
+                doc_number: 'น.001/2567',
+                document_date: '2024-12-01',
+                organization: 'ผู้ว่าราชการจังหวัดน่าน',
+                doc_type: 'หนังสือราชการ',
+                subject: 'เชิญประชุมคณะกรรมการรักษาความปลอดภัย',
+                priority: 'ปกติ',
+                responsible: 'พ.ต.อ.สมชาย ใจดี',
+                notes: 'ประชุมวันที่ 15 ธ.ค. 2567',
+                status: 'received',
+                created_at: '2024-12-01T09:30:00.000Z'
+            },
+            {
+                id: 2,
+                type: 'sent',
+                doc_number: 'น.002/2567',
+                document_date: '2024-12-01',
+                organization: 'สถานีตำรวจภูธรเมืองน่าน',
+                doc_type: 'รายงาน',
+                subject: 'รายงานสถานการณ์ความปลอดภัยประจำเดือน',
+                send_method: 'มือ',
+                sender: 'ส.ต.ท.วิชัย รักดี',
+                notes: 'ส่งรายงานประจำเดือน พ.ย. 2567',
+                status: 'sent',
+                created_at: '2024-12-01T14:15:00.000Z'
+            },
+            {
+                id: 3,
+                type: 'received',
+                doc_number: 'น.003/2567',
+                document_date: today,
+                organization: 'กองบังคับการตำรวจภูธรจังหวัดน่าน',
+                doc_type: 'คำสั่ง',
+                subject: 'คำสั่งการปฏิบัติงานในช่วงเทศกาลปีใหม่',
+                priority: 'ด่วน',
+                responsible: 'พ.ต.ท.วิรัช ศรีสุข',
+                notes: 'มีผลบังคับใช้ทันที',
+                status: 'received',
+                created_at: new Date().toISOString()
             }
-        });
+        ];
+        
+        documents = sampleData;
+        localStorage.setItem('policeDocuments', JSON.stringify(documents));
+        displayDocuments();
+        updateStats();
+    }
+}
+
+// Event listeners สำหรับ modal
+function initializeModalEvents() {
+    const editModal = document.getElementById('editModal');
+    const closeBtn = editModal ? editModal.querySelector('.close') : null;
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeEditModal);
+    }
+    
+    window.addEventListener('click', function(event) {
+        if (event.target === editModal) {
+            closeEditModal();
+        }
+    });
+}
+
+// ฟังก์ชันเริ่มต้นระบบทั้งหมด
+function initializeSystem() {
+    // ตั้งค่าวันที่เริ่มต้น
+    const today = new Date().toISOString().split('T')[0];
+    const receiveDateInput = document.getElementById('receiveDate');
+    const sendDateInput = document.getElementById('sendDate');
+    
+    if (receiveDateInput) receiveDateInput.value = today;
+    if (sendDateInput) sendDateInput.value = today;
+    
+    // เชื่อมต่อฐานข้อมูล
+    initializeSupabase();
+    
+    // เริ่มต้น event listeners
+    initializeRegisterForm();
+    initializeSendForm();
+    initializeSearchInput();
+    initializeEditForm();
+    initializeModalEvents();
+    
+    // โหลดข้อมูลเริ่มต้น
+    loadDocuments().then(() => {
+        updateStats();
+        initializeSampleData();
+    });
+}
+
+// เริ่มต้นระบบเมื่อหน้าเว็บโหลดเสร็จ
+document.addEventListener('DOMContentLoaded', initializeSystem);
     </script>
 </body>
 </html>
