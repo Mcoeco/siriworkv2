@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการหนังสือราชการ - สถานีตำรวจภูธรน่าน</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.7/umd/supabase.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -599,20 +598,24 @@
             </div>
         </div>
     </div>
+<!-- โหลด Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-    // Supabase configuration
+    // ✅ ใช้ createClient แบบ UMD
+    const { createClient } = supabase;
     const supabaseUrl = 'https://kowaztnpsharqdroiliv.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const db = createClient(supabaseUrl, supabaseKey);
 
     // Global variables
     let documents = [];
     let currentFilter = 'all';
 
-    // Test connection
+    // ✅ Test connection
     async function testConnection() {
         try {
-            const { data, error } = await supabase.from('documents').select('count').limit(1);
+            const { data, error } = await db.from('documents').select('*').limit(1);
             if (error && error.code !== '42P01') {
                 console.error('Connection error:', error);
                 document.getElementById('dbStatus').innerHTML = '🔴 ไม่สามารถเชื่อมต่อ';
@@ -627,16 +630,14 @@
         }
     }
 
-    // Create table if it doesn't exist
+    // ✅ Initialize database
     async function initializeDatabase() {
         try {
-            const { data, error } = await supabase.from('documents').select('*').limit(1);
-            
+            const { data, error } = await db.from('documents').select('*').limit(1);
             if (error && error.code === '42P01') {
-                showAlert('กรุณาสร้างตาราง documents ในฐานข้อมูล Supabase ก่อนใช้งาน', 'error');
+                showAlert('กรุณาสร้างตาราง documents ใน Supabase ก่อนใช้งาน', 'error');
                 return false;
             }
-            
             return true;
         } catch (err) {
             console.error('Database initialization error:', err);
@@ -644,159 +645,119 @@
         }
     }
 
-    // Show loading
+    // ✅ Loading UI
     function showLoading(show = true) {
         const loading = document.getElementById('loading');
-        if (show) {
-            loading.classList.add('show');
-        } else {
-            loading.classList.remove('show');
-        }
+        if (show) loading.classList.add('show');
+        else loading.classList.remove('show');
     }
 
-    // Show tab function
+    // ✅ Switch tab
     function showTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
         document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-        
-        if (tabName === 'search') {
-            loadDocuments();
-        } else if (tabName === 'stats') {
-            updateStats();
-        }
+
+        if (tabName === 'search') loadDocuments();
+        else if (tabName === 'stats') updateStats();
     }
 
-    // Show alert function
+    // ✅ Show alert
     function showAlert(message, type = 'success') {
         const alert = document.getElementById('alert');
         alert.textContent = message;
         alert.className = `alert alert-${type} show`;
-        
-        setTimeout(() => {
-            alert.classList.remove('show');
-        }, 3000);
+        setTimeout(() => alert.classList.remove('show'), 3000);
     }
 
-    // Load documents from Supabase
+    // ✅ Load documents
     async function loadDocuments() {
         showLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('documents')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                throw error;
-            }
-
+            const { data, error } = await db.from('documents').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
             documents = data || [];
             displayDocuments();
         } catch (error) {
             console.error('Error loading documents:', error);
-            showAlert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message, 'error');
+            showAlert('โหลดข้อมูลล้มเหลว: ' + error.message, 'error');
         } finally {
             showLoading(false);
         }
     }
 
-    // Insert document to Supabase
+    // ✅ Insert
     async function insertDocument(docData) {
         try {
-            const { data, error } = await supabase
-                .from('documents')
-                .insert([{
-                    doc_number: docData.docNumber,
-                    doc_type: docData.docType,
-                    subject: docData.subject,
-                    organization: docData.organization,
-                    document_date: docData.date,
-                    priority: docData.priority || null,
-                    responsible: docData.responsible || null,
-                    sender: docData.sender || null,
-                    send_method: docData.sendMethod || null,
-                    notes: docData.notes || null,
-                    status: docData.status,
-                    record_type: docData.type
-                }])
-                .select();
-
-            if (error) {
-                throw error;
-            }
-
+            const { data, error } = await db.from('documents').insert([{
+                doc_number: docData.docNumber,
+                doc_type: docData.docType,
+                subject: docData.subject,
+                organization: docData.organization,
+                document_date: docData.date,
+                priority: docData.priority || null,
+                responsible: docData.responsible || null,
+                sender: docData.sender || null,
+                send_method: docData.sendMethod || null,
+                notes: docData.notes || null,
+                status: docData.status,
+                record_type: docData.type
+            }]).select();
+            if (error) throw error;
             return data[0];
         } catch (error) {
-            console.error('Error inserting document:', error);
+            console.error('Insert error:', error);
             throw error;
         }
     }
 
-    // Delete document from Supabase
+    // ✅ Delete
     async function deleteDocumentFromDB(id) {
         try {
-            const { error } = await supabase
-                .from('documents')
-                .delete()
-                .eq('id', id);
-
-            if (error) {
-                throw error;
-            }
+            const { error } = await db.from('documents').delete().eq('id', id);
+            if (error) throw error;
         } catch (error) {
-            console.error('Error deleting document:', error);
+            console.error('Delete error:', error);
             throw error;
         }
     }
 
-    // Filter documents
+    // ✅ Filter
     function filterDocuments(filter) {
         currentFilter = filter;
         displayDocuments();
     }
 
-    // Refresh documents
+    // ✅ Refresh
     async function refreshDocuments() {
         await loadDocuments();
-        showAlert('🔄 รีเฟรชข้อมูลเรียบร้อยแล้ว');
+        showAlert('🔄 รีเฟรชแล้ว');
     }
 
-    // Display documents
+    // ✅ Display
     function displayDocuments() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const container = document.getElementById('documentsList');
-        
         let filteredDocs = documents;
-        
-        // Filter by type
-        if (currentFilter === 'received') {
-            filteredDocs = documents.filter(doc => doc.record_type === 'received');
-        } else if (currentFilter === 'sent') {
-            filteredDocs = documents.filter(doc => doc.record_type === 'sent');
-        }
-        
-        // Filter by search term
+
+        if (currentFilter === 'received') filteredDocs = documents.filter(doc => doc.record_type === 'received');
+        else if (currentFilter === 'sent') filteredDocs = documents.filter(doc => doc.record_type === 'sent');
+
         if (searchTerm) {
-            filteredDocs = filteredDocs.filter(doc => 
+            filteredDocs = filteredDocs.filter(doc =>
                 doc.doc_number.toLowerCase().includes(searchTerm) ||
                 doc.subject.toLowerCase().includes(searchTerm) ||
                 doc.organization.toLowerCase().includes(searchTerm) ||
                 doc.doc_type.toLowerCase().includes(searchTerm)
             );
         }
-        
+
         if (filteredDocs.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">ไม่พบเอกสาร</div>';
+            container.innerHTML = '<div style="text-align:center;color:#666;padding:40px;">ไม่พบเอกสาร</div>';
             return;
         }
-        
+
         container.innerHTML = filteredDocs.map(doc => `
             <div class="document-card">
                 <div class="document-header">
@@ -804,154 +765,71 @@
                     <div class="status-badge status-${doc.record_type === 'received' ? 'received' : 'sent'}">
                         ${doc.record_type === 'received' ? '📥 รับ' : '📤 ส่ง'}
                     </div>
-                    <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding: 5px 10px; font-size: 12px;">🗑️ ลบ</button>
+                    <button class="btn btn-danger" onclick="deleteDocument(${doc.id})" style="padding:5px 10px;font-size:12px;">🗑️ ลบ</button>
                 </div>
-                
                 <div class="document-details">
-                    <div class="detail-item">
-                        <div class="detail-label">วันที่</div>
-                        <div class="detail-value">${new Date(doc.document_date).toLocaleDateString('th-TH')}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">${doc.record_type === 'received' ? 'จาก' : 'ส่งถึง'}</div>
-                        <div class="detail-value">${doc.organization}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">ประเภท</div>
-                        <div class="detail-value">${doc.doc_type}</div>
-                    </div>
-                    ${doc.record_type === 'received' && doc.priority ? `
-                        <div class="detail-item">
-                            <div class="detail-label">ความเร่งด่วน</div>
-                            <div class="detail-value">${doc.priority}</div>
-                        </div>
-                    ` : ''}
-                    ${doc.record_type === 'sent' && doc.send_method ? `
-                        <div class="detail-item">
-                            <div class="detail-label">ช่องทางส่ง</div>
-                            <div class="detail-value">${doc.send_method}</div>
-                        </div>
-                    ` : ''}
-                    ${doc.responsible || doc.sender ? `
-                        <div class="detail-item">
-                            <div class="detail-label">${doc.record_type === 'received' ? 'ผู้รับผิดชอบ' : 'ผู้ส่ง'}</div>
-                            <div class="detail-value">${doc.responsible || doc.sender || '-'}</div>
-                        </div>
-                    ` : ''}
+                    <div class="detail-item"><div class="detail-label">วันที่</div><div class="detail-value">${new Date(doc.document_date).toLocaleDateString('th-TH')}</div></div>
+                    <div class="detail-item"><div class="detail-label">${doc.record_type === 'received' ? 'จาก' : 'ส่งถึง'}</div><div class="detail-value">${doc.organization}</div></div>
+                    <div class="detail-item"><div class="detail-label">ประเภท</div><div class="detail-value">${doc.doc_type}</div></div>
                 </div>
-                
-                <div class="detail-item">
-                    <div class="detail-label">เรื่อง</div>
-                    <div class="detail-value" style="font-weight: 600; color: #1e3c72;">${doc.subject}</div>
-                </div>
-                
-                ${doc.notes ? `
-                    <div class="detail-item" style="margin-top: 15px;">
-                        <div class="detail-label">หมายเหตุ</div>
-                        <div class="detail-value">${doc.notes}</div>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e5e9; font-size: 12px; color: #666;">
-                    บันทึกเมื่อ: ${new Date(doc.created_at).toLocaleString('th-TH')}
-                </div>
+                <div class="detail-item"><div class="detail-label">เรื่อง</div><div class="detail-value" style="font-weight:600;color:#1e3c72;">${doc.subject}</div></div>
             </div>
         `).join('');
     }
 
-    // Delete document
+    // ✅ Delete wrapper
     async function deleteDocument(id) {
-        if (confirm('คุณต้องการลบเอกสารนี้หรือไม่?')) {
+        if (confirm('ต้องการลบเอกสารนี้หรือไม่?')) {
             try {
                 await deleteDocumentFromDB(id);
                 await loadDocuments();
-                showAlert('🗑️ ลบเอกสารเรียบร้อยแล้ว', 'success');
+                showAlert('🗑️ ลบแล้ว', 'success');
             } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการลบเอกสาร: ' + error.message, 'error');
+                showAlert('ลบไม่สำเร็จ: ' + error.message, 'error');
             }
         }
     }
 
-    // Update statistics
+    // ✅ Stats
     async function updateStats() {
-        try {
-            const received = documents.filter(doc => doc.record_type === 'received').length;
-            const sent = documents.filter(doc => doc.record_type === 'sent').length;
-            const today = new Date().toISOString().split('T')[0];
-            const todayDocs = documents.filter(doc => doc.document_date === today).length;
-            
-            document.getElementById('totalReceived').textContent = received;
-            document.getElementById('totalSent').textContent = sent;
-            document.getElementById('totalDocuments').textContent = documents.length;
-            document.getElementById('todayCount').textContent = todayDocs;
-            
-            // Monthly statistics
-            const monthlyData = {};
-            documents.forEach(doc => {
-                const month = new Date(doc.document_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long' });
-                if (!monthlyData[month]) {
-                    monthlyData[month] = { received: 0, sent: 0 };
-                }
-                monthlyData[month][doc.record_type]++;
-            });
-            
-            const monthlyStatsContainer = document.getElementById('monthlyStats');
-            if (Object.keys(monthlyData).length === 0) {
-                monthlyStatsContainer.innerHTML = '<p style="text-align: center; color: #666;">ยังไม่มีข้อมูล</p>';
-            } else {
-                monthlyStatsContainer.innerHTML = Object.entries(monthlyData)
-                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
-                    .map(([month, data]) => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
-                            <div style="font-weight: 600;">${month}</div>
-                            <div style="display: flex; gap: 20px;">
-                                <span style="color: #28a745;">📥 รับ: ${data.received || 0}</span>
-                                <span style="color: #007bff;">📤 ส่ง: ${data.sent || 0}</span>
-                                <span style="font-weight: 600;">รวม: ${(data.received || 0) + (data.sent || 0)}</span>
-                            </div>
-                        </div>
-                    `).join('');
-            }
-        } catch (error) {
-            console.error('Error updating stats:', error);
-        }
+        const received = documents.filter(doc => doc.record_type === 'received').length;
+        const sent = documents.filter(doc => doc.record_type === 'sent').length;
+        const today = new Date().toISOString().split('T')[0];
+        const todayDocs = documents.filter(doc => doc.document_date === today).length;
+
+        document.getElementById('totalReceived').textContent = received;
+        document.getElementById('totalSent').textContent = sent;
+        document.getElementById('totalDocuments').textContent = documents.length;
+        document.getElementById('todayCount').textContent = todayDocs;
     }
 
-    // Export data
+    // ✅ Export
     async function exportData() {
         try {
             const dataStr = JSON.stringify(documents, null, 2);
-            const dataBlob = new Blob([dataStr], {type:'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `police_documents_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `documents_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
             URL.revokeObjectURL(url);
-            showAlert('📁 ส่งออกข้อมูลเรียบร้อยแล้ว');
+            showAlert('📁 ส่งออกแล้ว');
         } catch (error) {
-            showAlert('เกิดข้อผิดพลาดในการส่งออกข้อมูล: ' + error.message, 'error');
+            showAlert('ส่งออกไม่สำเร็จ: ' + error.message, 'error');
         }
     }
 
-    // Initialize application
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Set default dates
+    // ✅ Init
+    document.addEventListener('DOMContentLoaded', async () => {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('receiveDate').value = today;
         document.getElementById('sendDate').value = today;
-        
-        // Add event listeners after DOM is loaded
-        // Register form submission
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
-            const submitBtn = document.getElementById('registerBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ กำลังบันทึก...';
-            
             try {
-                const docData = {
+                await insertDocument({
                     type: 'received',
                     docNumber: document.getElementById('docNumber').value,
                     date: document.getElementById('receiveDate').value,
@@ -962,32 +840,19 @@
                     responsible: document.getElementById('responsible').value,
                     notes: document.getElementById('notes').value,
                     status: 'received'
-                };
-                
-                await insertDocument(docData);
-                
-                showAlert('✅ บันทึกข้อมูลรับหนังสือเรียบร้อยแล้ว');
+                });
+                showAlert('✅ บันทึกเอกสารรับแล้ว');
                 this.reset();
-                document.getElementById('receiveDate').value = new Date().toISOString().split('T')[0];
-                
-            } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '📝 บันทึกข้อมูล';
+                document.getElementById('receiveDate').value = today;
+            } catch (err) {
+                showAlert('บันทึกไม่สำเร็จ: ' + err.message, 'error');
             }
         });
 
-        // Send form submission
-        document.getElementById('sendForm').addEventListener('submit', async function(e) {
+        document.getElementById('sendForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
-            const submitBtn = document.getElementById('sendBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ กำลังบันทึก...';
-            
             try {
-                const docData = {
+                await insertDocument({
                     type: 'sent',
                     docNumber: document.getElementById('sendDocNumber').value,
                     date: document.getElementById('sendDate').value,
@@ -998,45 +863,27 @@
                     sender: document.getElementById('sender').value,
                     notes: document.getElementById('sendNotes').value,
                     status: 'sent'
-                };
-                
-                await insertDocument(docData);
-                
-                showAlert('✅ บันทึกข้อมูลส่งหนังสือเรียบร้อยแล้ว');
+                });
+                showAlert('✅ บันทึกเอกสารส่งแล้ว');
                 this.reset();
-                document.getElementById('sendDate').value = new Date().toISOString().split('T')[0];
-                
-            } catch (error) {
-                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '📤 บันทึกการส่ง';
+                document.getElementById('sendDate').value = today;
+            } catch (err) {
+                showAlert('บันทึกไม่สำเร็จ: ' + err.message, 'error');
             }
         });
 
-        // Search input
-        document.getElementById('searchInput').addEventListener('input', function() {
-            displayDocuments();
-        });
+        document.getElementById('searchInput').addEventListener('input', displayDocuments);
 
-        // Test database connection
         const connected = await testConnection();
-        
         if (connected) {
-            // Initialize database
-            const dbInitialized = await initializeDatabase();
-            
-            if (dbInitialized) {
-                // Load documents
+            const dbReady = await initializeDatabase();
+            if (dbReady) {
                 await loadDocuments();
                 updateStats();
-            } else {
-                showAlert('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบการตั้งค่า', 'error');
             }
-        } else {
-            showAlert('ไม่สามารถเชื่อมต่อ Supabase ได้ กรุณาตรวจสอบ URL และ API Key', 'error');
         }
     });
 </script>
+
 </body>
 </html>
