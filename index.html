@@ -67,11 +67,12 @@ body {font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: l
 <p>สถานีตำรวจภูธรน่าน | จังหวัดน่าน</p>
 <div id="dbStatus" style="position:absolute; top:10px; right:20px; font-size:12px; opacity:0.8;"></div>
 </div>
-<div class="nav-tabs">
-<button class="nav-tab active" onclick="showTab('register')">📥 ลงทะเบียนรับ</button>
-<button class="nav-tab" onclick="showTab('send')">📤 ลงทะเบียนส่ง</button>
-<button class="nav-tab" onclick="showTab('search')">🔍 ค้นหาเอกสาร</button>
-<button class="nav-tab" onclick="showTab('stats')">📊 สถิติ</button>
+<div class="tabs" style="margin-bottom:20px;">
+  <button class="nav-tab active" onclick="showTab('receive')">📥 ลงทะเบียนรับ</button>
+  <button class="nav-tab" onclick="showTab('send')">📤 ลงทะเบียนส่ง</button>
+  <button class="nav-tab" onclick="showTab('search')">🔍 ค้นหา</button>
+  <button class="nav-tab" onclick="showTab('stats')">📊 สถิติ</button>
+</div>
 </div>
 <div class="content">
 <div id="alert" class="alert"></div>
@@ -283,7 +284,12 @@ sentList.appendChild(div);
 document.getElementById('totalReceived').textContent = receivedDocs.length;
 document.getElementById('totalSent').textContent = sentDocs.length;
 }
-
+function showTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.nav-tab[onclick="showTab('${tab}')"]`).classList.add('active');
+  document.getElementById(tab).classList.add('active');
+}
 // เพิ่มเอกสาร
 document.getElementById('registerForm').addEventListener('submit',e=>{
 e.preventDefault();
