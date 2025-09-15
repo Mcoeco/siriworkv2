@@ -601,34 +601,12 @@
     </div>
 
     <script>
-        // Initialize Supabase client
-        const SUPABASE_URL = 'https://kowaztnpsharqdroiliv.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        let documents = [];
-        let currentFilter = 'all';
 
-        // Database connection test
-        async function testConnection() {
-            try {
-                const { data, error } = await supabase.from('documents').select('count', { count: 'exact', head: true });
-                if (error) {
-                    document.getElementById('dbStatus').innerHTML = '❌ DB: Disconnected';
-                    console.error('Database connection error:', error);
-                    return false;
-                } else {
-                    document.getElementById('dbStatus').innerHTML = '✅ DB: Connected';
-                    return true;
-                }
-            } catch (err) {
-                document.getElementById('dbStatus').innerHTML = '❌ DB: Error';
-                console.error('Connection test failed:', err);
-                return false;
-            }
-        }
+import { createClient } from '@supabase/supabase-js'
 
+const supabaseUrl = 'https://kowaztnpsharqdroiliv.supabase.co'
+const supabaseKey = process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU
+const supabase = createClient(supabaseUrl, supabaseKey)
         // Create table if it doesn't exist
         async function initializeDatabase() {
             try {
