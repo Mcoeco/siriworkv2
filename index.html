@@ -630,12 +630,9 @@
     // Create table if it doesn't exist
     async function initializeDatabase() {
         try {
-            // Check if table exists by trying to select from it
             const { data, error } = await supabase.from('documents').select('*').limit(1);
             
             if (error && error.code === '42P01') {
-                // Table doesn't exist, we need to create it
-                // Since we can't create tables via client, show instructions
                 showAlert('กรุณาสร้างตาราง documents ในฐานข้อมูล Supabase ก่อนใช้งาน', 'error');
                 return false;
             }
@@ -758,83 +755,6 @@
             throw error;
         }
     }
-
-    // Register form submission
-    document.getElementById('registerForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById('registerBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '⏳ กำลังบันทึก...';
-        
-        try {
-            const docData = {
-                type: 'received',
-                docNumber: document.getElementById('docNumber').value,
-                date: document.getElementById('receiveDate').value,
-                organization: document.getElementById('fromOrg').value,
-                docType: document.getElementById('docType').value,
-                subject: document.getElementById('subject').value,
-                priority: document.getElementById('priority').value,
-                responsible: document.getElementById('responsible').value,
-                notes: document.getElementById('notes').value,
-                status: 'received'
-            };
-            
-            await insertDocument(docData);
-            
-            showAlert('✅ บันทึกข้อมูลรับหนังสือเรียบร้อยแล้ว');
-            this.reset();
-            document.getElementById('receiveDate').value = new Date().toISOString().split('T')[0];
-            
-        } catch (error) {
-            showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '📝 บันทึกข้อมูล';
-        }
-    });
-
-    // Send form submission
-    document.getElementById('sendForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById('sendBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '⏳ กำลังบันทึก...';
-        
-        try {
-            const docData = {
-                type: 'sent',
-                docNumber: document.getElementById('sendDocNumber').value,
-                date: document.getElementById('sendDate').value,
-                organization: document.getElementById('toOrg').value,
-                docType: document.getElementById('sendDocType').value,
-                subject: document.getElementById('sendSubject').value,
-                sendMethod: document.getElementById('sendMethod').value,
-                sender: document.getElementById('sender').value,
-                notes: document.getElementById('sendNotes').value,
-                status: 'sent'
-            };
-            
-            await insertDocument(docData);
-            
-            showAlert('✅ บันทึกข้อมูลส่งหนังสือเรียบร้อยแล้ว');
-            this.reset();
-            document.getElementById('sendDate').value = new Date().toISOString().split('T')[0];
-            
-        } catch (error) {
-            showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '📤 บันทึกการส่ง';
-        }
-    });
-
-    // Search input
-    document.getElementById('searchInput').addEventListener('input', function() {
-        displayDocuments();
-    });
 
     // Filter documents
     function filterDocuments(filter) {
@@ -1021,6 +941,84 @@
         document.getElementById('receiveDate').value = today;
         document.getElementById('sendDate').value = today;
         
+        // Add event listeners after DOM is loaded
+        // Register form submission
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('registerBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ กำลังบันทึก...';
+            
+            try {
+                const docData = {
+                    type: 'received',
+                    docNumber: document.getElementById('docNumber').value,
+                    date: document.getElementById('receiveDate').value,
+                    organization: document.getElementById('fromOrg').value,
+                    docType: document.getElementById('docType').value,
+                    subject: document.getElementById('subject').value,
+                    priority: document.getElementById('priority').value,
+                    responsible: document.getElementById('responsible').value,
+                    notes: document.getElementById('notes').value,
+                    status: 'received'
+                };
+                
+                await insertDocument(docData);
+                
+                showAlert('✅ บันทึกข้อมูลรับหนังสือเรียบร้อยแล้ว');
+                this.reset();
+                document.getElementById('receiveDate').value = new Date().toISOString().split('T')[0];
+                
+            } catch (error) {
+                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '📝 บันทึกข้อมูล';
+            }
+        });
+
+        // Send form submission
+        document.getElementById('sendForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('sendBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ กำลังบันทึก...';
+            
+            try {
+                const docData = {
+                    type: 'sent',
+                    docNumber: document.getElementById('sendDocNumber').value,
+                    date: document.getElementById('sendDate').value,
+                    organization: document.getElementById('toOrg').value,
+                    docType: document.getElementById('sendDocType').value,
+                    subject: document.getElementById('sendSubject').value,
+                    sendMethod: document.getElementById('sendMethod').value,
+                    sender: document.getElementById('sender').value,
+                    notes: document.getElementById('sendNotes').value,
+                    status: 'sent'
+                };
+                
+                await insertDocument(docData);
+                
+                showAlert('✅ บันทึกข้อมูลส่งหนังสือเรียบร้อยแล้ว');
+                this.reset();
+                document.getElementById('sendDate').value = new Date().toISOString().split('T')[0];
+                
+            } catch (error) {
+                showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '📤 บันทึกการส่ง';
+            }
+        });
+
+        // Search input
+        document.getElementById('searchInput').addEventListener('input', function() {
+            displayDocuments();
+        });
+
         // Test database connection
         const connected = await testConnection();
         
