@@ -855,13 +855,31 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        const { createClient } = supabase;
+        // Wait for Supabase to load
+        let db;
         const supabaseUrl = 'https://kowaztnpsharqdroiliv.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvd2F6dG5wc2hhcnFkcm9pbGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDg1NDUsImV4cCI6MjA3MzQ4NDU0NX0.xU8TH4rrPkno64oDxvb_lwVWeTJEsmN5DY9vj6dTYEU';
-        const db = createClient(supabaseUrl, supabaseKey);
+        
+        // Initialize Supabase when available
+        function initializeSupabase() {
+            try {
+                if (typeof supabase !== 'undefined' && supabase.createClient) {
+                    const { createClient } = supabase;
+                    db = createClient(supabaseUrl, supabaseKey);
+                    return true;
+                } else {
+                    console.log('Supabase not loaded yet, retrying...');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error initializing Supabase:', error);
+                return false;
+            }
+        }
 
         // Global variables
         let documents = [];
@@ -870,6 +888,11 @@
 
         // ✅ Test connection
         async function testConnection() {
+            if (!db) {
+                document.getElementById('dbStatus').innerHTML = '🔴 Supabase ไม่พร้อม';
+                return false;
+            }
+            
             try {
                 const { data, error } = await db.from('documents').select('*').limit(1);
                 if (error && error.code !== '42P01') {
@@ -888,6 +911,11 @@
 
         // ✅ Initialize database
         async function initializeDatabase() {
+            if (!db) {
+                showAlert('ระบบฐานข้อมูลไม่พร้อม', 'error');
+                return false;
+            }
+            
             try {
                 const { data, error } = await db.from('documents').select('*').limit(1);
                 if (error && error.code === '42P01') {
@@ -1400,6 +1428,18 @@
 
         // ✅ Init
         document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for Supabase to initialize
+            let retryCount = 0;
+            while (!initializeSupabase() && retryCount < 10) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                retryCount++;
+            }
+            
+            if (!db) {
+                showAlert('ไม่สามารถโหลด Supabase ได้ กรุณารีเฟรชหน้าเว็บ', 'error');
+                return;
+            }
+
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('receiveDate').value = today;
             document.getElementById('sendDate').value = today;
