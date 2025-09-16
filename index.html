@@ -1174,19 +1174,11 @@ function updateExportOption(format) {
     else selectedExportFormats.delete(format);
 }
 
-
-        function updateExportOption(format) {
-            const checkbox = document.getElementById(`export${format.charAt(0).toUpperCase() + format.slice(1)}`);
-            const option = checkbox.closest('.export-option');
-            
-            if (checkbox.checked) {
-                selectedExportFormats.add(format);
-                option.classList.add('selected');
-            } else {
-                selectedExportFormats.delete(format);
-                option.classList.remove('selected');
-            }
-        }
+function closeExportModal() {
+    document.getElementById('exportModal').classList.remove('show');
+    selectedExportFormats.clear();
+    updateExportUI();
+}
 
         function updateExportUI() {
             ['json', 'csv', 'excel', 'pdf', 'word', 'print'].forEach(format => {
