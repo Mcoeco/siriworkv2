@@ -1170,17 +1170,18 @@
             document.getElementById('exportModal').classList.add('show');
         }
 
-        function closeExportModal() {
-            document.getElementById('exportModal').classList.remove('show');
-            selectedExportFormats.clear();
-            updateExportUI();
-        }
+function toggleExportOption(format) {
+    const checkbox = document.getElementById(`export${format.charAt(0).toUpperCase() + format.slice(1)}`);
+    checkbox.checked = !checkbox.checked;
+    updateExportOption(format);
+}
 
-        function toggleExportOption(format) {
-            const checkbox = document.getElementById(`export${format.charAt(0).toUpperCase() + format.slice(1)}`);
-            checkbox.checked = !checkbox.checked;
-            updateExportOption(format);
-        }
+function updateExportOption(format) {
+    const checkbox = document.getElementById(`export${format.charAt(0).toUpperCase() + format.slice(1)}`);
+    if (checkbox.checked) selectedExportFormats.add(format);
+    else selectedExportFormats.delete(format);
+}
+
 
         function updateExportOption(format) {
             const checkbox = document.getElementById(`export${format.charAt(0).toUpperCase() + format.slice(1)}`);
@@ -1204,169 +1205,126 @@
             });
         }
 
-        // ✅ Execute Export
-        async function executeExport() {
-            if (selectedExportFormats.size === 0) {
-                showAlert('กรุณาเลือกรูปแบบการส่งออก', 'error');
-                return;
-            }
+// Execute Export
+async function executeExport() {
+    if (selectedExportFormats.size === 0) {
+        showAlert('กรุณาเลือกรูปแบบการส่งออก', 'error');
+        return;
+    }
 
-            try {
-                for (const format of selectedExportFormats) {
-                    await exportToFormat(format);
-                }
-                showAlert(`📁 ส่งออกข้อมูลในรูปแบบ ${Array.from(selectedExportFormats).join(', ')} แล้ว`);
-                closeExportModal();
-            } catch (error) {
-                showAlert('ส่งออกไม่สำเร็จ: ' + error.message, 'error');
-            }
+    try {
+        for (const format of selectedExportFormats) {
+            await exportToFormat(format);
         }
+        showAlert(`📁 ส่งออกข้อมูลในรูปแบบ ${Array.from(selectedExportFormats).join(', ')} แล้ว`);
+        closeExportModal();
+    } catch (error) {
+        showAlert('ส่งออกไม่สำเร็จ: ' + error.message, 'error');
+    }
+}
 
-        // ✅ Export to different formats
-        async function exportToFormat(format) {
-            const timestamp = new Date().toISOString().split('T')[0];
-            const filename = `documents_${timestamp}`;
+// Export to different formats (PDF ลบออก)
+async function exportToFormat(format) {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `documents_${timestamp}`;
 
-            switch (format) {
-                case 'json':
-                    exportJSON(filename);
-                    break;
-                case 'csv':
-                    exportCSV(filename);
-                    break;
-                case 'excel':
-                    exportExcel(filename);
-                    break;
-                case 'pdf':
-                    exportPDF(filename);
-                    break;
-                case 'word':
-                    exportWord(filename);
-                    break;
-                case 'print':
-                    printDocuments();
-                    break;
-            }
+    switch (format) {
+        case 'json':
+            exportJSON(filename);
+            break;
+        case 'csv':
+            exportCSV(filename);
+            break;
+        case 'excel':
+            exportExcel(filename);
+            break;
+        case 'word':
+            exportWord(filename);
+            break;
+        case 'print':
+            printDocuments();
+            break;
+    }
+}
+
+
+function exportCSV() {
+    const headers = ['เลขที่หนังสือ','วันที่','ประเภท','หน่วยงาน','เรื่อง','ความเร่งด่วน','ผู้รับผิดชอบ','ผู้ส่ง','ช่องทางการส่ง','หมายเหตุ','ประเภทเอกสาร'];
+    const csvContent = [
+        headers.join(','),
+        ...documents.map(doc => [
+            `"${doc.doc_number}"`,
+            `"${new Date(doc.document_date).toLocaleDateString('th-TH')}"`,
+            `"${doc.type === 'received' ? 'รับ' : 'ส่ง'}"`,
+            `"${doc.organization}"`,
+            `"${doc.subject}"`,
+            `"${doc.priority||''}"`,
+            `"${doc.responsible||''}"`,
+            `"${doc.sender||''}"`,
+            `"${doc.send_method||''}"`,
+            `"${doc.notes||''}"`,
+            `"${doc.doc_type}"`
+        ].join(','))
+    ].join('\n');
+    downloadFile(new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }), `documents.csv`);
+}
+
+function exportExcel() {
+    const ws = XLSX.utils.json_to_sheet(documents.map(doc=>({
+        'เลขที่หนังสือ': doc.doc_number,
+        'วันที่': new Date(doc.document_date).toLocaleDateString('th-TH'),
+        'ประเภท': doc.type==='received'?'รับ':'ส่ง',
+        'หน่วยงาน': doc.organization,
+        'เรื่อง': doc.subject,
+        'ความเร่งด่วน': doc.priority||'',
+        'ผู้รับผิดชอบ': doc.responsible||'',
+        'ผู้ส่ง': doc.sender||'',
+        'ช่องทางการส่ง': doc.send_method||'',
+        'หมายเหตุ': doc.notes||'',
+        'ประเภทเอกสาร': doc.doc_type
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'เอกสาร');
+    XLSX.writeFile(wb, `documents.xlsx`);
+}
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // เพิ่มฟอนต์ไทย
+    doc.addFileToVFS("THSarabunNew.ttf", "BASE64_ENCODED_FONT_HERE"); // แทน BASE64 ด้วยของจริง
+    doc.addFont("THSarabunNew.ttf", "THSarabunNew", "normal");
+    doc.setFont("THSarabunNew");
+
+    doc.setFontSize(16);
+    doc.text('รายงานเอกสารราชการ', 20, 20);
+    doc.text('สถานีตำรวจภูธรน่าน', 20, 30);
+
+    let y = 40;
+    documents.forEach((d, i) => {
+        if (y > 270) {
+            doc.addPage();
+            y = 20;
         }
+        doc.setFontSize(12);
+        doc.text(`${i+1}. ${d.doc_number} | ${new Date(d.document_date).toLocaleDateString('th-TH')} | ${d.organization} | ${d.subject}`, 20, y);
+        y += 10;
+    });
 
-        function exportJSON(filename) {
-            const dataStr = JSON.stringify(documents, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            downloadFile(blob, `${filename}.json`);
-        }
+    doc.save(`documents.pdf`);
+}
 
-        function exportCSV(filename) {
-            const headers = ['เลขที่หนังสือ', 'วันที่', 'ประเภท', 'หน่วยงาน', 'เรื่อง', 'ความเร่งด่วน', 'ผู้รับผิดชอบ', 'ผู้ส่ง', 'ช่องทางการส่ง', 'หมายเหตุ', 'ประเภทเอกสาร'];
-            const csvContent = [
-                headers.join(','),
-                ...documents.map(doc => [
-                    `"${doc.doc_number}"`,
-                    `"${new Date(doc.document_date).toLocaleDateString('th-TH')}"`,
-                    `"${doc.type === 'received' ? 'รับ' : 'ส่ง'}"`,
-                    `"${doc.organization}"`,
-                    `"${doc.subject}"`,
-                    `"${doc.priority || ''}"`,
-                    `"${doc.responsible || ''}"`,
-                    `"${doc.sender || ''}"`,
-                    `"${doc.send_method || ''}"`,
-                    `"${doc.notes || ''}"`,
-                    `"${doc.doc_type}"`
-                ].join(','))
-            ].join('\n');
-            
-            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            downloadFile(blob, `${filename}.csv`);
-        }
 
-        function exportExcel(filename) {
-            const ws = XLSX.utils.json_to_sheet(documents.map(doc => ({
-                'เลขที่หนังสือ': doc.doc_number,
-                'วันที่': new Date(doc.document_date).toLocaleDateString('th-TH'),
-                'ประเภท': doc.type === 'received' ? 'รับ' : 'ส่ง',
-                'หน่วยงาน': doc.organization,
-                'เรื่อง': doc.subject,
-                'ความเร่งด่วน': doc.priority || '',
-                'ผู้รับผิดชอบ': doc.responsible || '',
-                'ผู้ส่ง': doc.sender || '',
-                'ช่องทางการส่ง': doc.send_method || '',
-                'หมายเหตุ': doc.notes || '',
-                'ประเภทเอกสาร': doc.doc_type
-            })));
-            
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'เอกสาร');
-            XLSX.writeFile(wb, `${filename}.xlsx`);
-        }
-
-        function exportPDF(filename) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            doc.setFont('helvetica');
-            doc.setFontSize(16);
-            doc.text('รายงานเอกสารราชการ', 20, 20);
-            doc.text('สถานีตำรวจภูธรน่าน', 20, 30);
-            
-            let y = 50;
-            doc.setFontSize(12);
-            
-            documents.forEach((docItem, index) => {
-                if (y > 250) {
-                    doc.addPage();
-                    y = 20;
-                }
-                
-                doc.text(`${index + 1}. ${docItem.doc_number}`, 20, y);
-                doc.text(`วันที่: ${new Date(docItem.document_date).toLocaleDateString('th-TH')}`, 20, y + 10);
-                doc.text(`หน่วยงาน: ${docItem.organization}`, 20, y + 20);
-                doc.text(`เรื่อง: ${docItem.subject}`, 20, y + 30);
-                y += 50;
-            });
-            
-            doc.save(`${filename}.pdf`);
-        }
-
-        function exportWord(filename) {
-            let content = `
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <title>รายงานเอกสารราชการ</title>
-                </head>
-                <body>
-                    <h1>รายงานเอกสารราชการ</h1>
-                    <h2>สถานีตำรวจภูธรน่าน</h2>
-                    <table border="1" style="width:100%; border-collapse: collapse;">
-                        <tr>
-                            <th>เลขที่หนังสือ</th>
-                            <th>วันที่</th>
-                            <th>ประเภท</th>
-                            <th>หน่วยงาน</th>
-                            <th>เรื่อง</th>
-                        </tr>
-            `;
-            
-            documents.forEach(doc => {
-                content += `
-                    <tr>
-                        <td>${doc.doc_number}</td>
-                        <td>${new Date(doc.document_date).toLocaleDateString('th-TH')}</td>
-                        <td>${doc.type === 'received' ? 'รับ' : 'ส่ง'}</td>
-                        <td>${doc.organization}</td>
-                        <td>${doc.subject}</td>
-                    </tr>
-                `;
-            });
-            
-            content += `
-                    </table>
-                </body>
-                </html>
-            `;
-            
-            const blob = new Blob([content], { type: 'application/msword' });
-            downloadFile(blob, `${filename}.doc`);
-        }
+function exportWord() {
+    let content = `<html><head><meta charset="utf-8"><title>เอกสารราชการ</title></head><body>`;
+    content+=`<h1>รายงานเอกสารราชการ</h1><h2>สถานีตำรวจภูธรน่าน</h2>`;
+    content+=`<table border="1" style="border-collapse:collapse;width:100%"><tr><th>เลขที่หนังสือ</th><th>วันที่</th><th>ประเภท</th><th>หน่วยงาน</th><th>เรื่อง</th></tr>`;
+    documents.forEach(d=>{
+        content+=`<tr><td>${d.doc_number}</td><td>${new Date(d.document_date).toLocaleDateString('th-TH')}</td><td>${d.type==='received'?'รับ':'ส่ง'}</td><td>${d.organization}</td><td>${d.subject}</td></tr>`;
+    });
+    content+=`</table></body></html>`;
+    downloadFile(new Blob([content],{type:'application/msword'}),'documents.doc');
+}
 
         function printDocuments() {
             const printWindow = window.open('', '_blank');
@@ -1417,14 +1375,13 @@
             printWindow.print();
         }
 
-        function downloadFile(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+function downloadFile(blob,filename){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
 
         // ✅ Init
         document.addEventListener('DOMContentLoaded', async () => {
